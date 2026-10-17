@@ -33,6 +33,7 @@ jobs:
           if ($LASTEXITCODE -eq 0) { $hits; exit 1 }
           if ($LASTEXITCODE -gt 1) { exit $LASTEXITCODE }
           Write-Host 'No private paths found.'
+          exit 0
 
       - name: Run offline test suite
         env:
