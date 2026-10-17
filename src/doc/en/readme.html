@@ -155,7 +155,7 @@
 <h2>How to use it</h2>
 <p>Press <code>NVDA+Alt+N</code> to start or stop. During each cycle every checked area is captured and recognised once; text is spoken only when it counts as changed. Check a subtitle area and a chat area, turn on queued speech, and new text from both areas is spoken without interruption.</p>
 <h3>Gesture conflict</h3>
-<p>The original LION and this add-on both default to <code>NVDA+Alt+N</code>; with both enabled the binding is ambiguous. Clear the key on one add-on, or bind a different shortcut to "Toggle OCR" for either in Input gestures.</p>
+<p>The original LION and this add-on both default to <code>NVDA+Alt+N</code>; with both enabled the binding is ambiguous. Clear the key on one add-on, or bind a different shortcut to "Toggle OCR" for either under NVDA menu → Preferences → Input gestures.</p>
 <h2>OCR areas</h2>
 <p><strong>Settings → LION modified</strong> contains a region list with three columns: region name, target and crop.</p>
 <ul>
@@ -163,10 +163,7 @@
 <li><strong>Add / Edit / Remove</strong> — use the buttons or Enter; each area has a name, target and four crop percentages.</li>
 <li><strong>Order and bulk</strong> — "Move up" / "Move down" set queued speech order; "Enable all" / "Disable all" toggle all.</li>
 <li><strong>Target</strong> — navigator object, whole screen, current window or current control.</li>
-<li><strong>Crop</strong> — percentages of the target rectangle: top and left offset it, bottom and right shrink it. "Whole</li>
-</ul>
-<p>screen + crop 70% from above" is the lower 30% strip where subtitles usually sit.</p>
-<ul>
+<li><strong>Crop</strong> — percentages of the target rectangle: top and left offset it, bottom and right shrink it. "Whole screen + crop 70% from above" is the lower 30% strip where subtitles usually sit.</li>
 <li>Top plus bottom, and left plus right, may not exceed 100%; the editor refuses such combinations.</li>
 </ul>
 <p>For subtitles, use one or two strip areas with about 70% cropped from the top; smaller areas are faster and produce less irrelevant text.</p>
@@ -208,17 +205,13 @@
 <p>Choose a strategy under Settings → LION modified → select an area → Edit…; <strong>Stable after (ms)</strong> defaults to 1500 (range 500–10000): lower it for fast typing, raise it for slow typing or jittery OCR. For games, we recommend <strong>Read once when stable</strong> at 1500 ms; for very long dialogue, use <strong>Read as it grows</strong> instead. De-duplication decides <strong>what</strong> is spoken; queued speech decides <strong>in which order</strong>.</p>
 <h3>Behaviour details</h3>
 <ul>
-<li><strong>The box clears, then the same line appears again</strong> (repeated shop dialogue): the line is spoken again by</li>
-</ul>
-<p>design.</p>
-<ul>
+<li><strong>The box clears, then the same line appears again</strong> (repeated shop dialogue): the line is spoken again by design.</li>
 <li><strong>Line-by-line append</strong> (line 1, then line 2): only the new line 2 is spoken; line 1 is not repeated.</li>
 <li><strong>The whole line is replaced</strong>: the new text is spoken in full.</li>
 <li><strong>Text that never stops changing</strong>: one forced reading happens after at most 10 seconds, so nothing is lost.</li>
 <li><strong>Two areas cover the same text</strong>: each area de-duplicates on its own, so the text is read twice; keep one.</li>
-<li><strong>Punctuation-only fragments</strong> (a stray <code>!</code>) are not spoken alone, while digit changes (<code>frame 1</code> →</li>
+<li><strong>Punctuation-only fragments</strong> (a stray <code>!</code>) are not spoken alone, while digit changes (<code>frame 1</code> → <code>frame 2</code>) count as new content and are never swallowed as jitter.</li>
 </ul>
-<p><code>frame 2</code>) count as new content and are never swallowed as jitter.</p>
 <h2>Queued speech</h2>
 <p>The settings include <strong>Queue speech</strong>, which we recommend when several areas are active.</p>
 <table>
@@ -265,14 +258,8 @@
 </ol>
 <h3>Recognition settings</h3>
 <ol>
-<li><strong>OCR interval (ms)</strong> — 100 ms to 10 s. With several areas the times add up; a cycle that overruns starts</li>
-</ol>
-<p>the next immediately, and cycles never overlap.</p>
-<ol>
-<li><strong>Text similarity threshold (%)</strong> — default 50; controls when text counts as changed. Each area is compared</li>
-</ol>
-<p>independently.</p>
-<ol>
+<li><strong>OCR interval (ms)</strong> — 100 ms to 10 s. With several areas the times add up; a cycle that overruns starts the next immediately, and cycles never overlap.</li>
+<li><strong>Text similarity threshold (%)</strong> — default 50; controls when text counts as changed. Each area is compared independently.</li>
 <li><strong>Regular expression filters (one per line)</strong> — matches are removed from the result, for example to suppress a watermark. Lines are joined into one before filtering, so <code>^</code> and <code>$</code> do not match an individual line; use a plain keyword such as <code>Sponsored</code> or <code>[^\s]*keyword[^\s]*</code>; leftover whitespace is collapsed.</li>
 </ol>
 <h2>Performance reference</h2>
@@ -316,14 +303,8 @@
 <p>Area size dominates the cost; with several areas the total is roughly the sum of the parts, and cropping to the subtitle strip remains the largest saving.</p>
 <h2>Known limitations</h2>
 <ul>
-<li><strong>Text order</strong> — lines are joined in detection order, not guaranteed reading order. Use <code>/layout-parsing</code> for</li>
-</ul>
-<p>whole documents.</p>
-<ul>
-<li><strong>The external service is required</strong> — with it down, this add-on cannot recognise anything; each area</li>
-</ul>
-<p>announces one error and then logs.</p>
-<ul>
+<li><strong>Text order</strong> — lines are joined in detection order, not guaranteed reading order. Use <code>/layout-parsing</code> for whole documents.</li>
+<li><strong>The external service is required</strong> — with it down, this add-on cannot recognise anything; each area announces one error and then logs.</li>
 <li><strong>No document parsing on <code>/ocr</code></strong> — whole-page to Markdown is a different pipeline; use <code>/layout-parsing</code>.</li>
 <li><strong>More areas cost more time</strong> — each adds its own capture and OCR request; check only the areas you need.</li>
 </ul>
@@ -373,74 +354,46 @@
 <h2>Full changelog</h2>
 <h3>Version 3.3.7 (LION modified)</h3>
 <ul>
-<li>Shorter labels for de-duplication, area editing and service settings, back to the original add-on's concise</li>
+<li>Shorter labels for de-duplication, area editing and service settings, back to the original add-on's concise wording; status messages are shorter too, and behaviour is unchanged.</li>
+<li>Added the parallel <strong>lite</strong> add-on: one area, the near-original interface and the same client as the full edition. Different IDs, package names and configuration sections let both coexist; rebind one gesture.</li>
 </ul>
-<p>wording; status messages are shorter too, and behaviour is unchanged.</p>
-<ul>
-<li>Added the parallel <strong>lite</strong> add-on: one area, the near-original interface and the same client as the full</li>
-</ul>
-<p>edition. Different IDs, package names and configuration sections let both coexist; rebind one gesture.</p>
 <h3>Version 3.3.6 (LION modified)</h3>
 <ul>
-<li>New <strong>Model / endpoint</strong> setting: editable combo box with <code>/ocr</code>, <code>/ocr-acc</code>, <code>/layout-parsing</code>, custom paths</li>
+<li>New <strong>Model / endpoint</strong> setting: editable combo box with <code>/ocr</code>, <code>/ocr-acc</code>, <code>/layout-parsing</code>, custom paths and full URLs; the service URL became a base address, and old configurations migrate automatically.</li>
+<li>Merged <strong>Test connection</strong> and <strong>get model list</strong> into <strong>Test / get models</strong>; model discovery prefers <code>/models</code> and <code>/v1/models</code>, then falls back to the OpenAPI list. Added basic PaddleOCR-VL text extraction and fixed a de-duplication regression.</li>
 </ul>
-<p>and full URLs; the service URL became a base address, and old configurations migrate automatically.</p>
-<ul>
-<li>Merged <strong>Test connection</strong> and <strong>get model list</strong> into <strong>Test / get models</strong>; model discovery prefers</li>
-</ul>
-<p><code>/models</code> and <code>/v1/models</code>, then falls back to the OpenAPI list. Added basic PaddleOCR-VL text extraction and fixed a de-duplication regression.</p>
 <h3>Version 3.3.5 (LION modified)</h3>
 <ul>
 <li>Fixed repeated reading in "Read as it grows" after a sentence had settled.</li>
-<li>Jitter detection now uses a length-aware edit distance instead of a common-prefix ratio; a fuzzy anchor finds</li>
+<li>Jitter detection now uses a length-aware edit distance instead of a common-prefix ratio; a fuzzy anchor finds the resume point after a misread character, punctuation-only fragments are no longer spoken alone, and digit changes count as new content.</li>
 </ul>
-<p>the resume point after a misread character, punctuation-only fragments are no longer spoken alone, and digit changes count as new content.</p>
 <h3>Version 3.3.4 (LION modified)</h3>
 <ul>
-<li>"Read once when stable" no longer re-announces a sentence after OCR jitter; frames are classified as same,</li>
+<li>"Read once when stable" no longer re-announces a sentence after OCR jitter; frames are classified as same, jitter, growth or replacement, and jitter never clears the announced record.</li>
+<li>"Read as it grows" resumes from the content actually spoken instead of the whole previous frame; the 10-second guard fires only when content actually stops growing, and an empty frame no longer resets it.</li>
 </ul>
-<p>jitter, growth or replacement, and jitter never clears the announced record.</p>
-<ul>
-<li>"Read as it grows" resumes from the content actually spoken instead of the whole previous frame; the</li>
-</ul>
-<p>10-second guard fires only when content actually stops growing, and an empty frame no longer resets it.</p>
 <h3>Version 3.3.3 (LION modified)</h3>
 <ul>
-<li><strong>Per-area de-duplication</strong>: Classic (similarity), Read once when stable, Read as it grows and Off (every</li>
-</ul>
-<p>change); existing and migrated areas stay on Classic.</p>
-<ul>
+<li><strong>Per-area de-duplication</strong>: Classic (similarity), Read once when stable, Read as it grows and Off (every change); existing and migrated areas stay on Classic.</li>
 <li>The logic moved into a standalone <code>dedup</code> module tested with a virtual clock.</li>
 </ul>
 <h3>Version 3.3.2 (LION modified)</h3>
 <ul>
-<li><strong>Multi-area OCR</strong> and <strong>queued speech</strong>: checked areas run each cycle, and changed texts are queued in area</li>
+<li><strong>Multi-area OCR</strong> and <strong>queued speech</strong>: checked areas run each cycle, and changed texts are queued in area order without interrupting each other.</li>
+<li>Each area chooses its own target and four crop percentages; old single-area configurations migrate automatically, and each area de-duplicates and reports failures independently.</li>
 </ul>
-<p>order without interrupting each other.</p>
-<ul>
-<li>Each area chooses its own target and four crop percentages; old single-area configurations migrate</li>
-</ul>
-<p>automatically, and each area de-duplicates and reports failures independently.</p>
 <h3>Version 3.3.1 (LION modified)</h3>
 <ul>
-<li>The backend changed from the bundled PaddleOCR-json subprocess to an external PaddleOCR HTTP service, with</li>
+<li>The backend changed from the bundled PaddleOCR-json subprocess to an external PaddleOCR HTTP service, with settings for URL, token, timeout, image format, visualisation, minimum score, detection longest side and errors.</li>
+<li>Added a <strong>Test connection</strong> button and fixed a regex-filter defect that could leave whitespace and speak empty content. The package shrank from about 310 MB to about 60 KB; separate IDs and configuration sections allow coexistence with the original LION.</li>
 </ul>
-<p>settings for URL, token, timeout, image format, visualisation, minimum score, detection longest side and errors.</p>
-<ul>
-<li>Added a <strong>Test connection</strong> button and fixed a regex-filter defect that could leave whitespace and speak</li>
-</ul>
-<p>empty content. The package shrank from about 310 MB to about 60 KB; separate IDs and configuration sections allow coexistence with the original LION.</p>
 <h2>Licence and credits</h2>
 <ul>
 <li>Original LION: Stefan Moisei, Cary-rowen, anmi2004, hwf1324 — https://github.com/anmi2004/LION</li>
-<li>This add-on: <strong>xiaoshunxing</strong> — external PaddleOCR service integration, multi-area OCR, per-area</li>
-</ul>
-<p>de-duplication, queued speech, settings panel, regex-filter fix and packaging cleanup.</p>
-<ul>
+<li>This add-on: <strong>xiaoshunxing</strong> — external PaddleOCR service integration, multi-area OCR, per-area de-duplication, queued speech, settings panel, regex-filter fix and packaging cleanup.</li>
 <li>Licence: GNU GPL v2 or later, the same as the original.</li>
-<li>Feature design and interface come from the original authors; our changes are the recognition backend, the</li>
+<li>Feature design and interface come from the original authors; our changes are the recognition backend, the area model, de-duplication and speech scheduling.</li>
 </ul>
-<p>area model, de-duplication and speech scheduling.</p>
 <p>AI disclosure: New text in this modification was created by us with AI assistance; upstream original text is excluded. Model: DeepSeek-V4.1-Flash.</p>
 </body>
 </html>

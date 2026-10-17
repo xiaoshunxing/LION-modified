@@ -44,9 +44,7 @@ fast-endpoint recognition test in one go.
 2. **Model / endpoint** – editable combo box, initial endpoint `/ocr`.
 3. **Service token** – masked; empty means no authorization header.
 4. **Request timeout (ms)** – initial value 15000; raise it for `/layout-parsing` (max 120000).
-5. **Image format**, **return visualisation image (slow)**, **minimum score**, **detection longest side**,
-   **announce errors once** – as in the full edition; detection longest side and minimum score have no effect on
-   `/layout-parsing` (the server ignores them).
+5. **Image format**, **return visualisation image (slow)**, **minimum score**, **detection longest side**, **announce errors once** – as in the full edition; detection longest side and minimum score have no effect on `/layout-parsing` (the server ignores them).
 
 ### Recognition
 
@@ -64,8 +62,7 @@ The major version follows upstream **3.3** (original LION 3.3.0); releases use *
 ## Licence and credits
 
 - Based on [LION](https://github.com/anmi2004/LION) by Stefan Moisei, Cary-rowen, anmi2004 and hwf1324.
-- Distributed under the **GNU General Public License v2 or later** (GPL-2.0-or-later); the full text is in
-  `COPYING.txt` in the bundle or repository.
+- Distributed under the **GNU General Public License v2 or later** (GPL-2.0-or-later); the full text is in `COPYING.txt` in the bundle or repository.
 - Original authorship is fully preserved; lite edition and UI wording by xiaoshunxing.
 - This add-on is based on LION; we are not affiliated with NV Access or the original authors.
 

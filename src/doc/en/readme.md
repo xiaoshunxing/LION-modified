@@ -135,8 +135,7 @@ Clear the key on one add-on, or bind a different shortcut to "Toggle OCR" for ei
 - **Add / Edit / Remove** — use the buttons or Enter; each area has a name, target and four crop percentages.
 - **Order and bulk** — "Move up" / "Move down" set queued speech order; "Enable all" / "Disable all" toggle all.
 - **Target** — navigator object, whole screen, current window or current control.
-- **Crop** — percentages of the target rectangle: top and left offset it, bottom and right shrink it. "Whole
-  screen + crop 70% from above" is the lower 30% strip where subtitles usually sit.
+- **Crop** — percentages of the target rectangle: top and left offset it, bottom and right shrink it. "Whole screen + crop 70% from above" is the lower 30% strip where subtitles usually sit.
 - Top plus bottom, and left plus right, may not exceed 100%; the editor refuses such combinations.
 
 For subtitles, use one or two strip areas with about 70% cropped from the top; smaller areas are faster and
@@ -166,14 +165,12 @@ De-duplication decides **what** is spoken; queued speech decides **in which orde
 
 ### Behaviour details
 
-- **The box clears, then the same line appears again** (repeated shop dialogue): the line is spoken again by
-  design.
+- **The box clears, then the same line appears again** (repeated shop dialogue): the line is spoken again by design.
 - **Line-by-line append** (line 1, then line 2): only the new line 2 is spoken; line 1 is not repeated.
 - **The whole line is replaced**: the new text is spoken in full.
 - **Text that never stops changing**: one forced reading happens after at most 10 seconds, so nothing is lost.
 - **Two areas cover the same text**: each area de-duplicates on its own, so the text is read twice; keep one.
-- **Punctuation-only fragments** (a stray `!`) are not spoken alone, while digit changes (`frame 1` →
-  `frame 2`) count as new content and are never swallowed as jitter.
+- **Punctuation-only fragments** (a stray `!`) are not spoken alone, while digit changes (`frame 1` → `frame 2`) count as new content and are never swallowed as jitter.
 
 ## Queued speech
 
@@ -209,10 +206,8 @@ With queued speech on, pressing `NVDA+Alt+N` to stop does not clear texts that a
 
 ### Recognition settings
 
-1. **OCR interval (ms)** — 100 ms to 10 s. With several areas the times add up; a cycle that overruns starts
-   the next immediately, and cycles never overlap.
-2. **Text similarity threshold (%)** — default 50; controls when text counts as changed. Each area is compared
-   independently.
+1. **OCR interval (ms)** — 100 ms to 10 s. With several areas the times add up; a cycle that overruns starts the next immediately, and cycles never overlap.
+2. **Text similarity threshold (%)** — default 50; controls when text counts as changed. Each area is compared independently.
 3. **Regular expression filters (one per line)** — matches are removed from the result, for example to suppress a watermark. Lines are joined into one before filtering, so `^` and `$` do not match an individual line; use a plain keyword such as `Sponsored` or `[^\s]*keyword[^\s]*`; leftover whitespace is collapsed.
 
 ## Performance reference
@@ -231,10 +226,8 @@ Area size dominates the cost; with several areas the total is roughly the sum of
 
 ## Known limitations
 
-- **Text order** — lines are joined in detection order, not guaranteed reading order. Use `/layout-parsing` for
-  whole documents.
-- **The external service is required** — with it down, this add-on cannot recognise anything; each area
-  announces one error and then logs.
+- **Text order** — lines are joined in detection order, not guaranteed reading order. Use `/layout-parsing` for whole documents.
+- **The external service is required** — with it down, this add-on cannot recognise anything; each area announces one error and then logs.
 - **No document parsing on `/ocr`** — whole-page to Markdown is a different pipeline; use `/layout-parsing`.
 - **More areas cost more time** — each adds its own capture and OCR request; check only the areas you need.
 
@@ -254,56 +247,38 @@ Area size dominates the cost; with several areas the total is roughly the sum of
 ## Full changelog
 
 ### Version 3.3.7 (LION modified)
-- Shorter labels for de-duplication, area editing and service settings, back to the original add-on's concise
-  wording; status messages are shorter too, and behaviour is unchanged.
-- Added the parallel **lite** add-on: one area, the near-original interface and the same client as the full
-  edition. Different IDs, package names and configuration sections let both coexist; rebind one gesture.
+- Shorter labels for de-duplication, area editing and service settings, back to the original add-on's concise wording; status messages are shorter too, and behaviour is unchanged.
+- Added the parallel **lite** add-on: one area, the near-original interface and the same client as the full edition. Different IDs, package names and configuration sections let both coexist; rebind one gesture.
 
 ### Version 3.3.6 (LION modified)
-- New **Model / endpoint** setting: editable combo box with `/ocr`, `/ocr-acc`, `/layout-parsing`, custom paths
-  and full URLs; the service URL became a base address, and old configurations migrate automatically.
-- Merged **Test connection** and **get model list** into **Test / get models**; model discovery prefers
-  `/models` and `/v1/models`, then falls back to the OpenAPI list. Added basic PaddleOCR-VL text extraction and
-  fixed a de-duplication regression.
+- New **Model / endpoint** setting: editable combo box with `/ocr`, `/ocr-acc`, `/layout-parsing`, custom paths and full URLs; the service URL became a base address, and old configurations migrate automatically.
+- Merged **Test connection** and **get model list** into **Test / get models**; model discovery prefers `/models` and `/v1/models`, then falls back to the OpenAPI list. Added basic PaddleOCR-VL text extraction and fixed a de-duplication regression.
 
 ### Version 3.3.5 (LION modified)
 - Fixed repeated reading in "Read as it grows" after a sentence had settled.
-- Jitter detection now uses a length-aware edit distance instead of a common-prefix ratio; a fuzzy anchor finds
-  the resume point after a misread character, punctuation-only fragments are no longer spoken alone, and digit
-  changes count as new content.
+- Jitter detection now uses a length-aware edit distance instead of a common-prefix ratio; a fuzzy anchor finds the resume point after a misread character, punctuation-only fragments are no longer spoken alone, and digit changes count as new content.
 
 ### Version 3.3.4 (LION modified)
-- "Read once when stable" no longer re-announces a sentence after OCR jitter; frames are classified as same,
-  jitter, growth or replacement, and jitter never clears the announced record.
-- "Read as it grows" resumes from the content actually spoken instead of the whole previous frame; the
-  10-second guard fires only when content actually stops growing, and an empty frame no longer resets it.
+- "Read once when stable" no longer re-announces a sentence after OCR jitter; frames are classified as same, jitter, growth or replacement, and jitter never clears the announced record.
+- "Read as it grows" resumes from the content actually spoken instead of the whole previous frame; the 10-second guard fires only when content actually stops growing, and an empty frame no longer resets it.
 
 ### Version 3.3.3 (LION modified)
-- **Per-area de-duplication**: Classic (similarity), Read once when stable, Read as it grows and Off (every
-  change); existing and migrated areas stay on Classic.
+- **Per-area de-duplication**: Classic (similarity), Read once when stable, Read as it grows and Off (every change); existing and migrated areas stay on Classic.
 - The logic moved into a standalone `dedup` module tested with a virtual clock.
 
 ### Version 3.3.2 (LION modified)
-- **Multi-area OCR** and **queued speech**: checked areas run each cycle, and changed texts are queued in area
-  order without interrupting each other.
-- Each area chooses its own target and four crop percentages; old single-area configurations migrate
-  automatically, and each area de-duplicates and reports failures independently.
+- **Multi-area OCR** and **queued speech**: checked areas run each cycle, and changed texts are queued in area order without interrupting each other.
+- Each area chooses its own target and four crop percentages; old single-area configurations migrate automatically, and each area de-duplicates and reports failures independently.
 
 ### Version 3.3.1 (LION modified)
-- The backend changed from the bundled PaddleOCR-json subprocess to an external PaddleOCR HTTP service, with
-  settings for URL, token, timeout, image format, visualisation, minimum score, detection longest side and
-  errors.
-- Added a **Test connection** button and fixed a regex-filter defect that could leave whitespace and speak
-  empty content. The package shrank from about 310 MB to about 60 KB; separate IDs and configuration
-  sections allow coexistence with the original LION.
+- The backend changed from the bundled PaddleOCR-json subprocess to an external PaddleOCR HTTP service, with settings for URL, token, timeout, image format, visualisation, minimum score, detection longest side and errors.
+- Added a **Test connection** button and fixed a regex-filter defect that could leave whitespace and speak empty content. The package shrank from about 310 MB to about 60 KB; separate IDs and configuration sections allow coexistence with the original LION.
 
 ## Licence and credits
 
 - Original LION: Stefan Moisei, Cary-rowen, anmi2004, hwf1324 — https://github.com/anmi2004/LION
-- This add-on: **xiaoshunxing** — external PaddleOCR service integration, multi-area OCR, per-area
-  de-duplication, queued speech, settings panel, regex-filter fix and packaging cleanup.
+- This add-on: **xiaoshunxing** — external PaddleOCR service integration, multi-area OCR, per-area de-duplication, queued speech, settings panel, regex-filter fix and packaging cleanup.
 - Licence: GNU GPL v2 or later, the same as the original.
-- Feature design and interface come from the original authors; our changes are the recognition backend, the
-  area model, de-duplication and speech scheduling.
+- Feature design and interface come from the original authors; our changes are the recognition backend, the area model, de-duplication and speech scheduling.
 
 AI disclosure: New text in this modification was created by us with AI assistance; upstream original text is excluded. Model: DeepSeek-V4.1-Flash.
