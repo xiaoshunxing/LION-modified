@@ -22,7 +22,7 @@ body:
       label: 插件变体
       options:
         - 完整版 LION-modified
-        - 简洁版 LION-modified-lite
+        - lite LION-modified-lite
         - 两个都装了
     validations:
       required: true
@@ -37,7 +37,7 @@ body:
     id: service
     attributes:
       label: OCR 服务与端点
-      description: 只写地址类型/端点，不要写令牌。例如 本机 /ocr 或 局域网 /layout-parsing
+      description: 只写地址类型/端点，不要写令牌。例如 本机 /ocr、局域网 /layout-parsing
     validations:
       required: true
   - type: textarea
@@ -75,3 +75,7 @@ body:
           required: true
         - label: 我已确认这是 LION 修改版的问题，而不是上游 LION 或 OCR 服务本身
           required: false
+  - type: markdown
+    attributes:
+      value: |
+        AI 创作声明：本模板由我们与 AI 共同创作；模型：DeepSeek-V4.1-Flash。

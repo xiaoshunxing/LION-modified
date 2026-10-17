@@ -1,13 +1,13 @@
 # Contributing
 
-欢迎提交 issue 和 pull request。提交代码即表示同意以本项目的 **GPL-2.0-or-later** 许可发布你的贡献。
+欢迎提交 issue 和 pull request。提交代码即表示同意以我们的 **GPL-2.0-or-later** 许可发布你的贡献。
 
 ## 开发环境
 
 - Windows + PowerShell 7（`pwsh`）；
 - Python 3.12 或更高；
 - NVDA 2026.2（做安装/面板冒烟测试时需要）；
-- 一个可用的 PaddleOCR HTTP 服务（默认 `http://127.0.0.1:23353`），只用于在线测试。
+- 推荐在本机部署 PaddleOCR HTTP 服务；在线测试示例地址 `http://127.0.0.1:23353`，请按实际部署修改。
 
 ## 测试
 
@@ -33,7 +33,7 @@ pwsh -File scripts\build_addon.ps1 -Variant lite -Python python
 ## 代码风格
 
 - Python 使用 **tab** 缩进，与现有文件一致；
-- 注释与用户可见文本以中文为主，英文文档同步更新；
+- 注释与界面文案以中文为主，英文文档同步更新；
 - 不引入新的运行时依赖；插件只依赖 Python 标准库和 NVDA 自带库；
 - 修改 `src/` 时，同步检查 `variants/lite/src/`（lite 的客户端从完整版复制，不存副本）；
 - 修改界面字符串时，同步更新 `.po`，并重新编译 `.mo`。
@@ -63,3 +63,5 @@ pwsh -File scripts\build_addon.ps1 -Variant lite -Python python
 ## 安全问题
 
 请不要在公开 issue 里贴令牌或敏感日志，按 [SECURITY.md](SECURITY.md) 私下报告。
+
+AI 创作声明：本文案由我们与 AI 共同创作；模型：DeepSeek-V4.1-Flash。

@@ -820,3 +820,5 @@ Releases.
 - Attribution appears in `manifest.ini` `author`, both readmes, and the changelog in
   `locale/zh_CN/manifest.ini`.
 - Releases must stay GPL v2+ and must not remove the original authors.
+
+AI disclosure: This text was created by us with AI assistance; model: DeepSeek-V4.1-Flash.

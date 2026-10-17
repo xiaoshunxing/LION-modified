@@ -70,267 +70,7 @@
 <p>Initial release</p>
 <p>--------</p>
 <h1>Changes in this fork (LION modified 3.3.7)</h1>
-<h2>3.3.7: shorter UI wording + the lite edition</h2>
-<h3>Shorter wording (full edition)</h3>
-<p>No behaviour changed in this release, only the wording went back to the <strong>short labels of the original add-on</strong>:</p>
-<ul>
-<li>de-duplication strategies no longer carry long parentheticals: <code>Classic (similarity)</code>, <code>Read once when stable</code>,</li>
-</ul>
-<p><code>Read as it grows</code>, <code>Off (every change)</code>;</p>
-<ul>
-<li>labels are shorter, e.g. <code>Stable after (ms):</code>, <code>&amp;Queue speech</code>, <code>Service &amp;token:</code>, <code>&amp;Model / endpoint:</code>,</li>
-</ul>
-<p><code>Return &amp;visualisation image (slow)</code>, <code>Detection longest side (0 = default):</code>;</p>
-<ul>
-<li>"Test / get models" is now <strong>"Test / get models"</strong>, and status messages are shorter</li>
-</ul>
-<p>(e.g. "Source: OpenAPI endpoints").</p>
-<p>Behaviour, configuration keys and de-duplication are identical to 3.3.6.</p>
-<h3>Lite edition (new parallel add-on)</h3>
-<p>A separate add-on <strong>LION modified lite</strong> (ID <code>LION-modified-lite</code>) is released alongside:</p>
-<ul>
-<li>based on the <strong>single-area, near-original UI</strong> of 3.3.1, with fewer settings;</li>
-<li><strong>same client as the full 3.3.7</strong>: model/endpoint selection (<code>/ocr</code>, <code>/ocr-acc</code>, <code>/layout-parsing</code> or custom),</li>
-</ul>
-<p>the "Test / get models" button and PaddleOCR-VL text extraction;</p>
-<ul>
-<li>keeps 3.3.1 behaviour: one OCR area, classic similarity de-duplication, no queued speech, no per-area strategies.</li>
-</ul>
-<p>The two add-ons have different IDs, package names and configuration sections, so they can be installed <strong>together</strong> (the default gesture is shared, so rebind one of them). See the lite add-on's own documentation for details.</p>
-<h3>Version numbering</h3>
-<p>The major version follows upstream <strong>3.3</strong> (original LION 3.3.0); fork releases use <strong>3.3.N</strong> and this release is <strong>3.3.7</strong>. Release packages are distributed through GitHub Releases.</p>
-<h2>3.3.6: custom model (OCR endpoint) and one-click test / model list</h2>
-<h3>What "model" means here</h3>
-<p>The PaddleOCR service hosts <strong>several pipelines on one port</strong>: <code>/ocr</code> (PP-OCRv6, fast), <code>/ocr-acc</code> (accurate, only if the server enables it) and <code>/layout-parsing</code> (PaddleOCR-VL). The server has <strong>no model parameter</strong>: the pipeline is chosen at start-up, so the client can only choose <strong>which endpoint to POST to</strong>. In this add-on "model" therefore means <strong>OCR endpoint</strong>: <code>/ocr</code> by default, or <code>/ocr-acc</code>, <code>/layout-parsing</code>, any custom path, or even a full URL pointing at a service on another machine.</p>
-<p>&gt; The service URL is the base address (e.g. <code>http://127.0.0.1:23353</code>) and the model is the endpoint (e.g. <code>/ocr</code>); the &gt; request URL is the two joined together. <strong>Configurations from 3.3.5 are migrated automatically</strong> on first start, &gt; producing exactly the same request URL as before.</p>
-<h3>What the "Test / get models" button does</h3>
-<p>One button performs four steps and reports each of them below the button:</p>
-<ol>
-<li><strong>Health check</strong> on <code>/health</code>.</li>
-<li><strong>Model list</strong>, tried in order of how conventional the API is:</li>
-</ol>
-<ul>
-<li><code>GET /models</code> — OpenAI-style model list (the <code>endpoint</code> field, when present, maps a model id to the real endpoint);</li>
-<li><code>GET /v1/models</code> — OpenAI-compatible implementations;</li>
-<li><code>GET /openapi.json</code> — <strong>fallback</strong>: the bundled PaddleOCR service has no <code>/models</code>, so this tier is used and the UI</li>
-</ul>
-<p>states "List source: OpenAPI endpoint list" instead of pretending it is a real model list.</p>
-<ol>
-<li><strong>Token check</strong>: a request body without <code>file</code> returns 401 for a bad token and 400/422 for a good one — no inference</li>
-</ol>
-<p>is triggered, so it is fast even for PaddleOCR-VL.</p>
-<ol>
-<li><strong>Recognition test</strong>: an 8×8 white image is sent to fast endpoints. For <code>/layout-parsing</code> this step is skipped with a</li>
-</ol>
-<p>note, because PaddleOCR-VL needs several seconds per request and would otherwise look like a timeout.</p>
-<p>The combo box is editable: any endpoint that is not in the list can be typed in.</p>
-<h3>Notes for PaddleOCR-VL (<code>/layout-parsing</code>)</h3>
-<ul>
-<li>It is a document parser and is an order of magnitude slower than PP-OCRv6; raise the request timeout (the default 15 s</li>
-</ul>
-<p>may be too short, the maximum is 120 s).</p>
-<ul>
-<li>Only text is used (in layout-block order); tables, formulas, charts and seals are skipped.</li>
-<li>"Detection longest side", "minimum recognition score" and similar settings have no effect on <code>/layout-parsing</code></li>
-</ul>
-<p>(the server ignores them); leave them at their defaults.</p>
-<h2>What 3.3.5 fixes (reported from a real game)</h2>
-<p>After 3.3.4, "read once when the text stops changing" was stable, but "read as it grows" announced the whole text again <strong>after the sentence had settled</strong>. 3.3.5 fixes that.</p>
-<p><strong>Two causes, compounding:</strong></p>
-<ol>
-<li>The frame classifier used a *common-prefix ratio*. In a long line, a misread character near the</li>
-</ol>
-<p><strong>beginning</strong> (e.g. position 3) makes that ratio tiny (3/26), so the frame was classified as "a new sentence".</p>
-<ol>
-<li>On "new sentence", <code>read as it grows</code> cleared its record of what had been spoken and therefore</li>
-</ol>
-<p><strong>restarted from the first character</strong>. ("Read once when stable" already had an "already announced" guard, which is why only the incremental mode showed the bug.)</p>
-<p><strong>What 3.3.5 changes:</strong></p>
-<ul>
-<li>The jitter test is now a <strong>length-aware edit distance</strong>: one difference for short lines, up to two</li>
-</ul>
-<p>for long lines (12+ characters). The prefix ratio is gone.</p>
-<ul>
-<li>A <strong>fuzzy anchor</strong> locates the resume point even when the already-spoken text contains a misread</li>
-</ul>
-<p>character, so only the new part is read.</p>
-<ul>
-<li>Incremental mode now has the same <strong>"already announced" similarity guard</strong> as the stable mode.</li>
-<li>Punctuation-only fragments (e.g. a stray <code>！</code>) are no longer spoken on their own.</li>
-<li>Digit/counter changes (<code>frame 1</code> → <code>frame 2</code>, <code>HP: 100</code> → <code>HP: 90</code>) are explicitly treated as new</li>
-</ul>
-<p>content and are never swallowed as jitter.</p>
-<p><strong>Expected behaviour after the fix</strong>: long dialogue is read phrase by phrase; once it finishes and sits on screen, an occasional OCR misread no longer causes the whole passage to be read again.</p>
-<h2>What 3.3.4 fixes (reported from a real game)</h2>
-<p>Two real-world problems with the 3.3.3 strategies are fixed in 3.3.4:</p>
-<ol>
-<li><strong>"Read once when stable" re-announced the same sentence repeatedly.</strong></li>
-</ol>
-<p>Real OCR jitters every frame (a missing punctuation mark, an extra space, one misread character, occasionally a completely empty frame). The old implementation treated any difference as "a new sentence", wiping the record of what had already been spoken, so the line was announced again once it settled. Frames are now classified as *same / jitter / growth / replace*, and <strong>jitter never clears the announced record</strong> — so a sentence is spoken once.</p>
-<ol>
-<li><strong>"Read as it grows" re-read from the beginning.</strong></li>
-</ol>
-<p>The old anchor was "the whole previous frame"; one frame of jitter reset it to zero and speech restarted at the first character. The anchor is now <strong>the content that was actually spoken</strong>, so only the new fragment is read.</p>
-<ol>
-<li>Also fixed: a long line typed character by character for more than 10 seconds could be cut by the</li>
-</ol>
-<p>safety guard, speaking <strong>half a sentence</strong>. The guard now only fires when the content really stops growing.</p>
-<h3>When repetition is still expected</h3>
-<ul>
-<li><strong>The dialogue box is really cleared and the same line appears again</strong> (repeated shop dialogue):</li>
-</ul>
-<p>spoken again by design.</p>
-<ul>
-<li><strong>Two regions cover the same text</strong>: each region deduplicates on its own, so it is read twice.</li>
-</ul>
-<p>Keep only one region.</p>
-<ul>
-<li><strong>A line is replaced by a completely different one and then restored</strong> within a short time:</li>
-</ul>
-<p>treated as two sentences.</p>
-<ul>
-<li><strong>A change of a single digit</strong> (e.g. <code>frame 1</code> → <code>frame 2</code>) is treated as new content, so it is</li>
-</ul>
-<p>never swallowed by the jitter logic.</p>
-<h2>What is new compared with 3.3.2 (read this first)</h2>
-<p>Every OCR area now has a <strong>deduplication</strong> drop-down. The default is still "Classic (similarity)", so <strong>subtitle usage is exactly as before</strong>; for RPG dialogue, switch the dialogue area to "Read once when stable".</p>
-<table>
-<thead>
-<tr>
-<th>Deduplication</th>
-<th>Best for</th>
-<th>Behaviour</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Classic (similarity) <strong>default</strong></td>
-<td>Subtitles, text that appears in one go</td>
-<td>speaks when similarity to the previous text is below the threshold (original behaviour)</td>
-</tr>
-<tr>
-<td>Read once when stable</td>
-<td><strong>RPG dialogue, typewriter effects</strong></td>
-<td>waits until the text stops growing, then speaks the whole line once</td>
-</tr>
-<tr>
-<td>Read as it grows</td>
-<td>Very long dialogue (10 s or more)</td>
-<td>releases phrase by phrase at punctuation while it is still being typed</td>
-</tr>
-<tr>
-<td>Off</td>
-<td>Troubleshooting</td>
-<td>speaks every change</td>
-</tr>
-</tbody>
-</table>
-<h2>Why a new strategy is needed</h2>
-<p>The original dedup assumes the text appears complete in one frame (subtitles). RPG dialogue appears <strong>one character at a time</strong>, so every frame is an extension of the previous one and the similarity keeps climbing. After speaking "你" from the first frame, the whole line is judged "unchanged" and never spoken again.</p>
-<p>Measured on this machine with the default threshold of 0.5:</p>
-<table>
-<thead>
-<tr>
-<th>Frame</th>
-<th>Recognised text</th>
-<th>Similarity to previous</th>
-<th>Classic strategy</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>1</td>
-<td>你</td>
-<td>0.00</td>
-<td>speaks "你"</td>
-</tr>
-<tr>
-<td>2</td>
-<td>你好</td>
-<td>0.67</td>
-<td>skipped</td>
-</tr>
-<tr>
-<td>3</td>
-<td>你好冒</td>
-<td>0.80</td>
-<td>skipped</td>
-</tr>
-<tr>
-<td>…</td>
-<td>…</td>
-<td>…</td>
-<td>…</td>
-</tr>
-<tr>
-<td>9</td>
-<td>你好冒险者欢迎来到</td>
-<td>0.94</td>
-<td>skipped</td>
-</tr>
-<tr>
-<td>12</td>
-<td>你好冒险者欢迎来到新手村</td>
-<td>0.96</td>
-<td>skipped</td>
-</tr>
-</tbody>
-</table>
-<p>The result: only the first character is ever spoken. The new "read once when the text stops changing" strategy turns that timeline into: <strong>silent while typing, then the whole line once when it settles.</strong></p>
-<h2>Choosing and tuning</h2>
-<p>Settings → LION modified → select an area → Edit…; at the bottom of the dialog:</p>
-<ul>
-<li><strong>Deduplication</strong> — one of the four strategies above.</li>
-<li><strong>Stable after (ms)</strong> — default 1500, range 500–10000.</li>
-<li>Fast typing: lower it (e.g. 800) to speak sooner.</li>
-<li>Slow typing or jittery OCR: raise it (e.g. 2500) so a half-finished line is not spoken as if complete.</li>
-</ul>
-<p><strong>Recommendation for games</strong>: set the dialogue area to "Read once when stable" with 1500 ms. If a long dialogue box shows many characters and takes a long time to finish, use "Read as it grows" instead.</p>
-<h2>One strategy per area</h2>
-<p>Deduplication is configured <strong>per area</strong>, so a typical setup is:</p>
-<table>
-<thead>
-<tr>
-<th>Area</th>
-<th>Deduplication</th>
-<th>Why</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Subtitle strip (video)</td>
-<td>Classic</td>
-<td>the line appears at once; the original behaviour fits</td>
-</tr>
-<tr>
-<td>Dialogue box (RPG)</td>
-<td>Read once when stable</td>
-<td>appears character by character</td>
-</tr>
-<tr>
-<td>Long text / log area</td>
-<td>Read as it grows</td>
-<td>content keeps growing; read while it appears</td>
-</tr>
-<tr>
-<td>A test area</td>
-<td>Off</td>
-<td>check what OCR actually sees</td>
-</tr>
-</tbody>
-</table>
-<p>Together with <strong>queued speech</strong>: deduplication decides <strong>what</strong> is spoken, queueing decides <strong>how</strong> it is ordered.</p>
-<h2>Other behaviour details</h2>
-<ul>
-<li><strong>The box clears, then the same line appears again</strong> (repeated shop dialogue): it is spoken again.</li>
-<li><strong>Line-by-line append</strong> (line 1 first, then line 2): only the new line 2 is spoken; line 1 is not repeated.</li>
-<li><strong>The whole line is replaced</strong>: the new text is spoken in full.</li>
-<li><strong>Text that never stops changing</strong> (animation or a scrolling bar in the area): after at most 10 seconds a single</li>
-</ul>
-<p>forced reading happens, so nothing is silently lost.</p>
-<ul>
-<li><strong>Upgrading from 3.3.2</strong>: existing areas become "Classic" automatically; no settings need changing.</li>
-</ul>
+<p>We rebuilt LION's recognition backend on an external PaddleOCR HTTP service and added the controls we wanted as screen-reader users: several OCR areas, per-area de-duplication, queued speech and a service test.</p>
 <h2>Relationship to the original LION</h2>
 <table>
 <thead>
@@ -344,12 +84,12 @@
 <tr>
 <td>OCR backend</td>
 <td>Bundled PaddleOCR-json.exe subprocess</td>
-<td>External PaddleOCR HTTP service (POST /ocr)</td>
+<td>External PaddleOCR HTTP service (endpoint selectable)</td>
 </tr>
 <tr>
 <td>Add-on size</td>
 <td>about 310 MB</td>
-<td>about 75 KB</td>
+<td>about 100 KB</td>
 </tr>
 <tr>
 <td>Add-on ID</td>
@@ -372,7 +112,7 @@
 <td><strong>several areas, each with a check box</strong></td>
 </tr>
 <tr>
-<td>Deduplication</td>
+<td>De-duplication</td>
 <td>similarity only</td>
 <td><strong>four strategies, chosen per area</strong></td>
 </tr>
@@ -383,60 +123,104 @@
 </tr>
 </tbody>
 </table>
-<p>The two add-ons do not interfere with each other, but they use <strong>the same default gesture</strong>, so you must resolve that manually — see below.</p>
-<h2>Before use: start the external OCR service</h2>
-<p>This add-on ships <strong>no</strong> OCR engine. A reachable PaddleOCR service is required. For example, deploy it under <code>&lt;service-deploy-dir&gt;</code>:</p>
+<p>Both add-ons can be installed together because their IDs, package names and configuration sections differ. They share the default gesture, so rebind one; see Gesture conflict.</p>
+<h2>Running the OCR service</h2>
+<p>This add-on ships no OCR engine; it sends screenshots to a PaddleOCR HTTP service, while screen capture and image encoding use NVDA's own libraries (no Pillow).</p>
+<p>We recommend running the PaddleOCR HTTP service locally: lower latency and the token stays on your machine. The examples below use <code>http://127.0.0.1:23353</code>; replace the address, endpoint and token with your own deployment.</p>
+<p>The service decides which endpoints exist. These are common examples, not fixed parts of this add-on:</p>
+<ul>
+<li><code>/ocr</code> — fast screen OCR, our usual choice for subtitles.</li>
+<li><code>/ocr-acc</code> — an accurate profile, when the deployment enables it.</li>
+<li><code>/layout-parsing</code> — PaddleOCR-VL document parsing; slower, so raise the request timeout.</li>
+</ul>
+<p>Configure it under <strong>NVDA menu → Preferences → Settings → LION modified</strong>:</p>
 <ol>
-<li>Run <code>启动PaddleOCR-VL.cmd</code> (or <code>scripts\start_app.ps1</code>). The console prints the access token.</li>
-<li>Open the NVDA menu → Preferences → Settings → <strong>LION modified</strong> and fill in:</li>
+<li><strong>OCR service URL</strong> — base address only, for example <code>http://127.0.0.1:23353</code>; do not append an endpoint.</li>
+<li><strong>Model / endpoint</strong> — <code>/ocr</code> initially; choose a listed endpoint or type another path or full URL.</li>
+<li><strong>Service token</strong> — the token issued by your deployment; masked, and empty sends no authorization header.</li>
+<li>Press <strong>Test / get models</strong> and read the result below the button.</li>
 </ol>
-<ul>
-<li><strong>OCR service URL</strong>: default <code>http://127.0.0.1:23353</code> (base address only, no endpoint)</li>
-<li><strong>Model / endpoint</strong>: default <code>/ocr</code> (fast profile); use <code>/ocr-acc</code> for the accurate profile and</li>
-</ul>
-<p><code>/layout-parsing</code> for PaddleOCR-VL</p>
-<ul>
-<li><strong>Service token</strong>: paste the contents of <code>config\api_token.txt</code> (leave empty if the service was started with <code>-NoAuth</code>)</li>
-</ul>
+<p>The request URL is the base address plus the endpoint: <code>http://127.0.0.1:23353</code> + <code>/ocr</code> → <code>http://127.0.0.1:23353/ocr</code>; <code>/ocr-acc</code> and <code>/layout-parsing</code> work the same way. A full URL in <strong>Model / endpoint</strong> replaces the base address, so the service may run on another host.</p>
+<h3>Test / get models</h3>
+<p>One button runs four checks and reports each result below it:</p>
 <ol>
-<li>Press <strong>Test / get models</strong>: health → model list → token check → fast-endpoint recognition test,</li>
+<li><strong>Health</strong> on <code>/health</code>.</li>
+<li><strong>Model list</strong> — <code>GET /models</code>, then <code>GET /v1/models</code>, then the OpenAPI endpoint list; the source is labelled when the result is not a true model list.</li>
+<li><strong>Token</strong> — a request body without <code>file</code> returns 401 for a bad token and 400 or 422 for a good one; no inference runs.</li>
+<li><strong>Recognition</strong> — an 8×8 white image goes to fast endpoints; skipped for <code>/layout-parsing</code>.</li>
 </ol>
-<p>with the result shown below the button.</p>
-<p>How the address and endpoint combine:</p>
-<ul>
-<li><code>http://127.0.0.1:23353</code> + <code>/ocr</code> → <code>http://127.0.0.1:23353/ocr</code> (default, fast profile)</li>
-<li><code>http://127.0.0.1:23353</code> + <code>/ocr-acc</code> → accurate profile (the service must run with <code>-OcrAccurate</code>)</li>
-<li><code>http://127.0.0.1:23353</code> + <code>/layout-parsing</code> → PaddleOCR-VL (slow; raise the request timeout)</li>
-<li>The model may also be a full URL; the base address is then ignored, so you can point it at another machine.</li>
-</ul>
-<p>For a service on another machine, use <code>http://that-host:23353/ocr</code>. The service listens on <code>0.0.0.0</code> and is protected by the token only — consider your network exposure.</p>
+<p>The combo box is editable, so an unlisted endpoint can be typed in.</p>
+<h3>PaddleOCR-VL notes</h3>
+<p><code>/layout-parsing</code> is a document parser and much slower; raise the timeout (initial 15 s, maximum 120 s). Only text is used, in layout-block order; tables, formulas, charts and seals are skipped. Settings such as detection longest side and minimum recognition score have no effect; leave them at their defaults.</p>
 <h2>How to use it</h2>
-<p>Press <code>NVDA+Alt+N</code> to start or stop. Every second, each <strong>checked</strong> area is recognised once, and text is spoken only when it changes.</p>
-<p>For example: check a "subtitle" area and a "chat" area, turn queued speech on, and the new texts from both areas are spoken one after another without interrupting each other.</p>
-<h3>Gesture conflict (important)</h3>
-<p>The original LION and LION modified both default to <code>NVDA+Alt+N</code>. With both add-ons enabled this is an <strong>ambiguous binding</strong>: which script runs is not predictable. Pick one of these fixes:</p>
+<p>Press <code>NVDA+Alt+N</code> to start or stop. During each cycle every checked area is captured and recognised once; text is spoken only when it counts as changed. Check a subtitle area and a chat area, turn on queued speech, and new text from both areas is spoken without interruption.</p>
+<h3>Gesture conflict</h3>
+<p>The original LION and this add-on both default to <code>NVDA+Alt+N</code>; with both enabled the binding is ambiguous. Clear the key on one add-on, or bind a different shortcut to "Toggle OCR" for either in Input gestures.</p>
+<h2>OCR areas</h2>
+<p><strong>Settings → LION modified</strong> contains a region list with three columns: region name, target and crop.</p>
 <ul>
-<li><strong>Keep only one</strong>: NVDA menu → Preferences → Input gestures → find "Toggle OCR" under the original LION → select <code>NVDA+Alt+N</code> in the keys list → press Clear.</li>
-<li><strong>Give each its own key</strong>: in Input gestures, bind a different shortcut to "Toggle OCR" for either add-on.</li>
+<li><strong>Check box</strong> — Space or the mouse toggles an area; only checked areas run, and unchecking keeps settings.</li>
+<li><strong>Add / Edit / Remove</strong> — use the buttons or Enter; each area has a name, target and four crop percentages.</li>
+<li><strong>Order and bulk</strong> — "Move up" / "Move down" set queued speech order; "Enable all" / "Disable all" toggle all.</li>
+<li><strong>Target</strong> — navigator object, whole screen, current window or current control.</li>
+<li><strong>Crop</strong> — percentages of the target rectangle: top and left offset it, bottom and right shrink it. "Whole</li>
 </ul>
-<h2>OCR regions (multi-area)</h2>
-<p>In <strong>Settings → LION modified</strong> there is a region list with three columns: <strong>region name / target / crop</strong>.</p>
+<p>screen + crop 70% from above" is the lower 30% strip where subtitles usually sit.</p>
 <ul>
-<li><strong>Check box</strong>: toggle with Space (or the mouse). <strong>Only checked regions are recognised while the feature runs.</strong> Unchecking disables a region without losing its settings.</li>
-<li><strong>Add</strong>: press "Add…", fill in a name, a target and the four crop percentages, then OK.</li>
-<li><strong>Edit</strong>: select a row and press Enter (or the "Edit…" button).</li>
-<li><strong>Remove</strong>: select a row and press the "Remove" button.</li>
-<li><strong>Order</strong>: use "Move up" / "Move down". <strong>The list order is the order in which queued speech is spoken.</strong></li>
-<li><strong>Bulk</strong>: "Enable all" / "Disable all" toggle every check box at once.</li>
-<li>Each region picks its own <strong>target</strong>: navigator object, whole screen, current window, or current control.</li>
-<li>Each region's <strong>crop</strong> is a percentage of that region's target rectangle (top and left offset it; bottom and right shrink it). For example "whole screen + crop 70% from above" is the horizontal strip in the lower 30% of the screen — exactly where subtitles live.</li>
-<li>Top+bottom and left+right may not add up to more than 100%; the editor refuses such combinations.</li>
+<li>Top plus bottom, and left plus right, may not exceed 100%; the editor refuses such combinations.</li>
 </ul>
-<p><strong>Recommendation</strong>: for subtitles, use one or two strip regions and crop about 70% off the top. Fewer and smaller regions make each round faster and produce less irrelevant text.</p>
-<h3>Old configurations are migrated automatically</h3>
-<p>Upgrading from 3.3.1 (or from the original add-on) turns the old "OCR target + four crop values" into a single region named "Area 1" on first start. The recognised area is identical to before — no manual setup needed.</p>
+<p>For subtitles, use one or two strip areas with about 70% cropped from the top; smaller areas are faster and produce less irrelevant text.</p>
+<h3>Existing configurations</h3>
+<p>Upgrading from an earlier single-area edition, or from the original add-on, converts the old target and crop values into one area named "Area 1" on first start; the recognised region is unchanged.</p>
+<h2>De-duplication</h2>
+<p>Classic de-duplication assumes text appears complete in one frame, as subtitles do. Typewriter dialogue arrives one character at a time, so each frame extends the previous one and similarity keeps climbing; after the first character is spoken, the rest may be judged unchanged. We added strategies for that case, chosen per area.</p>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>Best for</th>
+<th>Behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Classic (similarity) <strong>default</strong></td>
+<td>Subtitles, text that appears at once</td>
+<td>Speaks when similarity to the previous text is below the threshold; the original behaviour</td>
+</tr>
+<tr>
+<td>Read once when stable</td>
+<td><strong>RPG dialogue, typewriter effects</strong></td>
+<td>Waits until text stops growing, then speaks the whole line once</td>
+</tr>
+<tr>
+<td>Read as it grows</td>
+<td>Very long dialogue (10 s or more)</td>
+<td>Releases phrases at punctuation while text is still being typed</td>
+</tr>
+<tr>
+<td>Off (every change)</td>
+<td>Troubleshooting</td>
+<td>Speaks every change</td>
+</tr>
+</tbody>
+</table>
+<p>Choose a strategy under Settings → LION modified → select an area → Edit…; <strong>Stable after (ms)</strong> defaults to 1500 (range 500–10000): lower it for fast typing, raise it for slow typing or jittery OCR. For games, we recommend <strong>Read once when stable</strong> at 1500 ms; for very long dialogue, use <strong>Read as it grows</strong> instead. De-duplication decides <strong>what</strong> is spoken; queued speech decides <strong>in which order</strong>.</p>
+<h3>Behaviour details</h3>
+<ul>
+<li><strong>The box clears, then the same line appears again</strong> (repeated shop dialogue): the line is spoken again by</li>
+</ul>
+<p>design.</p>
+<ul>
+<li><strong>Line-by-line append</strong> (line 1, then line 2): only the new line 2 is spoken; line 1 is not repeated.</li>
+<li><strong>The whole line is replaced</strong>: the new text is spoken in full.</li>
+<li><strong>Text that never stops changing</strong>: one forced reading happens after at most 10 seconds, so nothing is lost.</li>
+<li><strong>Two areas cover the same text</strong>: each area de-duplicates on its own, so the text is read twice; keep one.</li>
+<li><strong>Punctuation-only fragments</strong> (a stray <code>!</code>) are not spoken alone, while digit changes (<code>frame 1</code> →</li>
+</ul>
+<p><code>frame 2</code>) count as new content and are never swallowed as jitter.</p>
 <h2>Queued speech</h2>
-<p>The settings contain a check box: <strong>Queue speech</strong> (recommended when using several regions).</p>
+<p>The settings include <strong>Queue speech</strong>, which we recommend when several areas are active.</p>
 <table>
 <thead>
 <tr>
@@ -447,54 +231,52 @@
 </thead>
 <tbody>
 <tr>
-<td>With several regions</td>
-<td>Interrupting: each round speaks only the <strong>last region whose text changed</strong></td>
-<td>Every changed region is <strong>queued in list order</strong> and spoken without interrupting each other</td>
-</tr>
-<tr>
-<td>With one region</td>
-<td>Identical to the original</td>
-<td>Identical to the original</td>
+<td>Several areas</td>
+<td>Each cycle speaks only the last area whose text changed</td>
+<td>Every changed area is queued in list order and spoken without interruption</td>
 </tr>
 <tr>
 <td>Mechanism</td>
-<td>NVDA's "speak now" priority (cuts off the previous utterance)</td>
-<td>NVDA's "speak next" priority (waits for the previous utterance)</td>
+<td>NVDA's "speak now" priority, cutting off the previous utterance</td>
+<td>NVDA's "speak next" priority, waiting for the previous utterance</td>
 </tr>
 </tbody>
 </table>
-<p>Note: with queued speech on, pressing <code>NVDA+Alt+N</code> to stop <strong>does not clear texts that are already queued</strong> — they finish playing. Disabling the add-on or quitting NVDA clears the queue.</p>
+<p>With queued speech on, pressing <code>NVDA+Alt+N</code> to stop does not clear texts that are already queued; they finish playing. Disabling the add-on or quitting NVDA clears the queue.</p>
 <h2>Settings</h2>
-<h3>OCR regions</h3>
+<h3>OCR areas</h3>
 <ol>
-<li><strong>Region list</strong> — see the section above (the check box decides whether a region takes part).</li>
-<li><strong>Deduplication</strong> — one of four strategies per area; see "Choosing and tuning".</li>
-<li><strong>Stable after (ms)</strong> — only used by "read once" and "read as it grows"; default 1500.</li>
-<li><strong>Queue speech</strong> — see the section above.</li>
+<li><strong>Region list</strong> — see OCR areas above; the check box decides whether an area takes part.</li>
+<li><strong>De-duplication</strong> — one of the four strategies per area; see De-duplication.</li>
+<li><strong>Stable after (ms)</strong> — used by "Read once when stable" and "Read as it grows"; default 1500.</li>
+<li><strong>Queue speech</strong> — see Queued speech.</li>
 </ol>
 <h3>External service</h3>
 <ol>
-<li><strong>OCR service URL</strong> — see above (base address, no endpoint).</li>
-<li><strong>Model / endpoint</strong> — editable combo box. Defaults to <code>/ocr</code> and is refreshed from the service by</li>
+<li><strong>OCR service URL</strong> — the base address, with no endpoint.</li>
+<li><strong>Model / endpoint</strong> — editable combo box, starting at <code>/ocr</code> and refreshed by <strong>Test / get models</strong>.</li>
+<li><strong>Service token</strong> — masked; empty means no authorization header.</li>
+<li><strong>Request timeout (ms)</strong> — default 15000; raise it for a slow or busy service.</li>
+<li><strong>Image format</strong> — <code>JPEG</code> (default, smaller and faster) or <code>PNG</code> (lossless, larger and slower).</li>
+<li><strong>Return visualisation image (slow)</strong> — off by default; drawing and encoding make it substantially slower.</li>
+<li><strong>Minimum recognition score (%)</strong> — default 0; raising it discards low-confidence text.</li>
+<li><strong>Detection longest side (0 = default)</strong> — 0 uses the server configuration; sending 1280 has not proved faster.</li>
+<li><strong>Announce errors once</strong> — on by default; a failure is announced once and then only logged.</li>
 </ol>
-<p>"Test / get models". Any custom path or full URL can be typed in.</p>
+<h3>Recognition settings</h3>
 <ol>
-<li><strong>Service token</strong> — see above. Masked in the dialog; when empty, no authorization header is sent.</li>
-<li><strong>Request timeout (ms)</strong> — default 15000. A subtitle strip takes tens of milliseconds, so this is generous; raise it on a slow or busy service.</li>
-<li><strong>Image format</strong> — <code>JPEG</code> (default, smaller and faster) or <code>PNG</code> (lossless, larger). Measured on this machine at 4K full screen: PNG about 364 ms, JPEG about 339 ms.</li>
-<li><strong>Return visualisation image</strong> — off by default. When enabled the server draws boxes and encodes an image: full-screen 4K went from about 0.34 s to about 2.0 s. <strong>Not recommended.</strong></li>
-<li><strong>Minimum recognition score (%)</strong> — default 0 (no extra filtering). Raising it discards low-confidence garbage; the service already drops empty lines.</li>
-<li><strong>Detection longest side</strong> — default 0, meaning "use the server configuration". Passing 1280 was not faster in our measurements, so nothing is sent by default.</li>
-<li><strong>Announce an error once when the OCR service is unavailable</strong> — on by default. Each region announces a failure once and then only logs, so you are not interrupted every second.</li>
+<li><strong>OCR interval (ms)</strong> — 100 ms to 10 s. With several areas the times add up; a cycle that overruns starts</li>
 </ol>
-<h3>Recognition settings (as in the original)</h3>
+<p>the next immediately, and cycles never overlap.</p>
 <ol>
-<li><strong>OCR interval (ms)</strong> — how often OCR runs, from 100 ms to 10 s. <strong>With several regions the times add up</strong>; if a round overruns the interval the next one starts immediately — rounds never overlap.</li>
-<li><strong>Text similarity threshold (%)</strong> — default 50; controls when text counts as "changed". <strong>Each region is compared independently.</strong></li>
-<li><strong>Regular expression filters</strong> — one regex per line; matches are removed from the result, e.g. to suppress a video watermark. <strong>Note that the recognised lines are joined into a single line first</strong>, so the anchors <code>^</code> and <code>$</code> do not match an individual recognised line — to drop a whole line use a plain keyword (such as <code>Sponsored</code>) or <code>[^\s]*keyword[^\s]*</code>. Leftover whitespace is collapsed automatically.</li>
+<li><strong>Text similarity threshold (%)</strong> — default 50; controls when text counts as changed. Each area is compared</li>
 </ol>
-<h2>Measured performance (this machine, 3840×2160, including base64 encoding and the HTTP round trip)</h2>
-<p>End-to-end time for a single region:</p>
+<p>independently.</p>
+<ol>
+<li><strong>Regular expression filters (one per line)</strong> — matches are removed from the result, for example to suppress a watermark. Lines are joined into one before filtering, so <code>^</code> and <code>$</code> do not match an individual line; use a plain keyword such as <code>Sponsored</code> or <code>[^\s]*keyword[^\s]*</code>; leftover whitespace is collapsed.</li>
+</ol>
+<h2>Performance reference</h2>
+<p>Test environment: 3840×2160; reference values, actual results depend on the machine and service.</p>
 <table>
 <thead>
 <tr>
@@ -505,45 +287,45 @@
 </thead>
 <tbody>
 <tr>
-<td>Full screen 3840×2160</td>
+<td>Full screen</td>
 <td>JPEG</td>
-<td><strong>301.6 ms</strong></td>
+<td><strong>302 ms</strong></td>
 </tr>
 <tr>
-<td>Full screen 3840×2160</td>
+<td>Full screen</td>
 <td>PNG</td>
-<td>472.1 ms</td>
+<td>472 ms</td>
 </tr>
 <tr>
 <td>1920×1080 area</td>
 <td>JPEG</td>
-<td><strong>141.9 ms</strong></td>
+<td><strong>142 ms</strong></td>
 </tr>
 <tr>
 <td>Subtitle strip 3840×540</td>
 <td>JPEG</td>
-<td><strong>79.3 ms</strong></td>
+<td><strong>79 ms</strong></td>
 </tr>
 <tr>
 <td>Subtitle strip 3840×259</td>
 <td>JPEG</td>
-<td><strong>29.7 ms</strong></td>
-</tr>
-<tr>
-<td>Full screen + visualisation image</td>
-<td>JPEG</td>
-<td>about 2000 ms</td>
+<td><strong>30 ms</strong></td>
 </tr>
 </tbody>
 </table>
-<p><strong>With several regions the total is roughly the sum of the parts</strong> (one request is in flight at a time). For example, a "subtitle strip" plus a "chat" region costs about 100–150 ms — still far below the default one-second interval.</p>
-<p><strong>Recommendation</strong>: for subtitles, always crop to the subtitle strip — it is dramatically faster and produces less irrelevant text.</p>
+<p>Area size dominates the cost; with several areas the total is roughly the sum of the parts, and cropping to the subtitle strip remains the largest saving.</p>
 <h2>Known limitations</h2>
 <ul>
-<li><strong>Text order</strong>: recognised lines are joined in detection order, which is not guaranteed to be reading order. This rarely matters for subtitles; for whole documents use the service's <code>/layout-parsing</code> endpoint instead.</li>
-<li><strong>The external service is mandatory</strong>: with the service down, this add-on cannot recognise anything (each region announces one error and logs afterwards).</li>
-<li><strong>No document parsing</strong>: this version only talks to <code>POST /ocr</code> (screen content OCR). Whole-page → Markdown is a different pipeline and is out of scope.</li>
-<li><strong>More regions cost more time</strong>: each extra region adds its own capture and OCR round trip. Only check the regions you actually need.</li>
+<li><strong>Text order</strong> — lines are joined in detection order, not guaranteed reading order. Use <code>/layout-parsing</code> for</li>
+</ul>
+<p>whole documents.</p>
+<ul>
+<li><strong>The external service is required</strong> — with it down, this add-on cannot recognise anything; each area</li>
+</ul>
+<p>announces one error and then logs.</p>
+<ul>
+<li><strong>No document parsing on <code>/ocr</code></strong> — whole-page to Markdown is a different pipeline; use <code>/layout-parsing</code>.</li>
+<li><strong>More areas cost more time</strong> — each adds its own capture and OCR request; check only the areas you need.</li>
 </ul>
 <h2>Troubleshooting</h2>
 <table>
@@ -556,27 +338,27 @@
 <tbody>
 <tr>
 <td>"OCR service unavailable"</td>
-<td>Make sure the service window is still open; <code>http://127.0.0.1:23353/health</code> should return <code>Healthy</code></td>
+<td>Make sure the service is running and <code>http://127.0.0.1:23353/health</code> returns <code>Healthy</code></td>
 </tr>
 <tr>
 <td>Unauthorized (HTTP 401)</td>
-<td>Wrong token. Copy it again from <code>config\api_token.txt</code> (no leading/trailing spaces or newlines)</td>
+<td>The token is wrong or malformed; copy it again with no leading or trailing whitespace</td>
 </tr>
 <tr>
 <td>HTTP 400 from the service</td>
-<td>The request carried a capability this endpoint does not support; the log contains the server hint and supportedFlags</td>
+<td>The endpoint does not support a capability in the request; the log has the server hint and supportedFlags</td>
 </tr>
 <tr>
 <td>Request timed out</td>
-<td>Service busy or image too large; raise the timeout, crop the area, or switch to JPEG</td>
+<td>The service is busy or the image is too large; raise the timeout, crop the area, or use JPEG</td>
 </tr>
 <tr>
 <td>Nothing is spoken</td>
-<td>Check that at least one region is <strong>checked</strong>; check the similarity threshold; check that your crop settings do not cut the subtitles away</td>
+<td>Check that at least one area is <strong>checked</strong>, review the threshold, and make sure the crop keeps the subtitles</td>
 </tr>
 <tr>
-<td>Only one region is read</td>
-<td>With queued speech off, each round speaks only the last region whose text changed; turn queued speech on to hear every region</td>
+<td>Only one area is read</td>
+<td>With queued speech off, each cycle speaks only the last changed area; turn queued speech on</td>
 </tr>
 <tr>
 <td>Gesture does nothing</td>
@@ -588,61 +370,77 @@
 </tr>
 </tbody>
 </table>
-<h2>Full changelog of this fork</h2>
-<h3>Version 3.3.6 (LION modified)</h3>
-<ul>
-<li>New "Model / endpoint" setting (editable combo box): <code>/ocr</code>, <code>/ocr-acc</code>, <code>/layout-parsing</code>, custom paths or full URLs.</li>
-<li>The service URL is now a base address with the endpoint separate; old configurations migrate automatically and produce</li>
-</ul>
-<p>the same request URL as 3.3.5.</p>
-<ul>
-<li>"Test connection" and "get model list" merged into one button: health → model list → token check → fast recognition test.</li>
-<li>The model list prefers conventional APIs (<code>/models</code>, <code>/v1/models</code>) and falls back to the server OpenAPI endpoint list,</li>
-</ul>
-<p>labelling the source instead of pretending it is a real model list.</p>
-<ul>
-<li>Basic text extraction for PaddleOCR-VL (<code>/layout-parsing</code>): layout blocks in order, Markdown fallback.</li>
-<li>A previous de-duplication regression was fixed; de-duplication and speech behaviour is identical to 3.3.5.</li>
-</ul>
+<h2>Full changelog</h2>
 <h3>Version 3.3.7 (LION modified)</h3>
 <ul>
-<li>Shorter UI wording, back to the original add-on's concise labels; behaviour identical to 3.3.6.</li>
-<li>New parallel add-on <strong>LION modified lite</strong> (single area, near-original UI, same client as the full edition).</li>
-<li>Version scheme: major 3.3, fork releases use 3.3.N; this release is 3.3.7.</li>
+<li>Shorter labels for de-duplication, area editing and service settings, back to the original add-on's concise</li>
 </ul>
+<p>wording; status messages are shorter too, and behaviour is unchanged.</p>
+<ul>
+<li>Added the parallel <strong>lite</strong> add-on: one area, the near-original interface and the same client as the full</li>
+</ul>
+<p>edition. Different IDs, package names and configuration sections let both coexist; rebind one gesture.</p>
+<h3>Version 3.3.6 (LION modified)</h3>
+<ul>
+<li>New <strong>Model / endpoint</strong> setting: editable combo box with <code>/ocr</code>, <code>/ocr-acc</code>, <code>/layout-parsing</code>, custom paths</li>
+</ul>
+<p>and full URLs; the service URL became a base address, and old configurations migrate automatically.</p>
+<ul>
+<li>Merged <strong>Test connection</strong> and <strong>get model list</strong> into <strong>Test / get models</strong>; model discovery prefers</li>
+</ul>
+<p><code>/models</code> and <code>/v1/models</code>, then falls back to the OpenAPI list. Added basic PaddleOCR-VL text extraction and fixed a de-duplication regression.</p>
+<h3>Version 3.3.5 (LION modified)</h3>
+<ul>
+<li>Fixed repeated reading in "Read as it grows" after a sentence had settled.</li>
+<li>Jitter detection now uses a length-aware edit distance instead of a common-prefix ratio; a fuzzy anchor finds</li>
+</ul>
+<p>the resume point after a misread character, punctuation-only fragments are no longer spoken alone, and digit changes count as new content.</p>
+<h3>Version 3.3.4 (LION modified)</h3>
+<ul>
+<li>"Read once when stable" no longer re-announces a sentence after OCR jitter; frames are classified as same,</li>
+</ul>
+<p>jitter, growth or replacement, and jitter never clears the announced record.</p>
+<ul>
+<li>"Read as it grows" resumes from the content actually spoken instead of the whole previous frame; the</li>
+</ul>
+<p>10-second guard fires only when content actually stops growing, and an empty frame no longer resets it.</p>
 <h3>Version 3.3.3 (LION modified)</h3>
-<ol>
-<li><strong>Per-area deduplication strategies</strong>: classic (similarity) / read once when the text stops changing / read as it grows / off.</li>
-<li>"Read once when stable" handles typewriter-style RPG dialogue: the whole line is spoken once it settles.</li>
-<li>"Read as it grows" handles long dialogue: phrases are released at punctuation as they appear.</li>
-<li>Existing and migrated areas stay on "Classic", so behaviour is identical to 3.3.2.</li>
-<li>Dedup logic moved into a standalone <code>dedup</code> module and is tested with a virtual clock.</li>
-<li>Per-area deduplication and queued speech by xiaoshunxing.</li>
-</ol>
+<ul>
+<li><strong>Per-area de-duplication</strong>: Classic (similarity), Read once when stable, Read as it grows and Off (every</li>
+</ul>
+<p>change); existing and migrated areas stay on Classic.</p>
+<ul>
+<li>The logic moved into a standalone <code>dedup</code> module tested with a virtual clock.</li>
+</ul>
 <h3>Version 3.3.2 (LION modified)</h3>
-<ol>
-<li><strong>Multi-area OCR</strong>: the single area became a list of add/edit/remove regions, each with its own check box; every checked region is recognised while the feature runs.</li>
-<li><strong>Queued speech</strong>: recognised texts are queued in region order and spoken without interrupting each other; turning it off keeps the interrupting behaviour.</li>
-<li>Each region chooses its own target (navigator object / whole screen / current window / current control) and its own four crop percentages.</li>
-<li>Old single-area configurations migrate automatically to one region on first start; behaviour is unchanged.</li>
-<li>Each region deduplicates and reports failures independently — one failing region does not affect the others.</li>
-<li>External service integration, multi-area OCR and queued speech by xiaoshunxing.</li>
-</ol>
+<ul>
+<li><strong>Multi-area OCR</strong> and <strong>queued speech</strong>: checked areas run each cycle, and changed texts are queued in area</li>
+</ul>
+<p>order without interrupting each other.</p>
+<ul>
+<li>Each area chooses its own target and four crop percentages; old single-area configurations migrate</li>
+</ul>
+<p>automatically, and each area de-duplicates and reports failures independently.</p>
 <h3>Version 3.3.1 (LION modified)</h3>
-<ol>
-<li>The OCR backend changed from the bundled PaddleOCR-json subprocess to an external PaddleOCR HTTP service (<code>POST /ocr</code>).</li>
-<li>New settings: service URL, token, request timeout, image format, visualisation image, minimum score, detection longest side, error notification.</li>
-<li>New <strong>Test connection</strong> button to verify the URL and token.</li>
-<li>Fixed: the regex filter could leave stray whitespace and then speak empty content (whitespace is now collapsed).</li>
-<li>Add-on size dropped from about 310 MB to about 60 KB by removing the bundled engine and the unused bundled PIL.</li>
-<li>Separate add-on ID and config section, so it can coexist with the original LION.</li>
-</ol>
+<ul>
+<li>The backend changed from the bundled PaddleOCR-json subprocess to an external PaddleOCR HTTP service, with</li>
+</ul>
+<p>settings for URL, token, timeout, image format, visualisation, minimum score, detection longest side and errors.</p>
+<ul>
+<li>Added a <strong>Test connection</strong> button and fixed a regex-filter defect that could leave whitespace and speak</li>
+</ul>
+<p>empty content. The package shrank from about 310 MB to about 60 KB; separate IDs and configuration sections allow coexistence with the original LION.</p>
 <h2>Licence and credits</h2>
 <ul>
 <li>Original LION: Stefan Moisei, Cary-rowen, anmi2004, hwf1324 — https://github.com/anmi2004/LION</li>
-<li>This fork: <strong>xiaoshunxing</strong> — external PaddleOCR service integration, multi-area OCR, queued speech, settings panel, regex-filter defect fix, packaging slimming</li>
-<li>Licence: GNU GPL v2 or later, same as the original</li>
+<li>This add-on: <strong>xiaoshunxing</strong> — external PaddleOCR service integration, multi-area OCR, per-area</li>
 </ul>
-<p>The feature design and user interface come from the original authors; this fork changes how the recognition backend is reached, how recognition areas are chosen, and how speech is scheduled.</p>
+<p>de-duplication, queued speech, settings panel, regex-filter fix and packaging cleanup.</p>
+<ul>
+<li>Licence: GNU GPL v2 or later, the same as the original.</li>
+<li>Feature design and interface come from the original authors; our changes are the recognition backend, the</li>
+</ul>
+<p>area model, de-duplication and speech scheduling.</p>
+<p>AI disclosure: New text in this modification was created by us with AI assistance; upstream original text is excluded. Model: DeepSeek-V4.1-Flash.</p>
 </body>
 </html>

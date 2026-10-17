@@ -33,7 +33,7 @@ body:
       label: 相关变体
       options:
         - 完整版 LION-modified
-        - 简洁版 LION-modified-lite
+        - lite LION-modified-lite
         - 两个都相关
     validations:
       required: true
@@ -44,3 +44,7 @@ body:
       options:
         - label: 这个建议不需要把 OCR 引擎/模型打包进插件
           required: false
+  - type: markdown
+    attributes:
+      value: |
+        AI 创作声明：本模板由我们与 AI 共同创作；模型：DeepSeek-V4.1-Flash。
