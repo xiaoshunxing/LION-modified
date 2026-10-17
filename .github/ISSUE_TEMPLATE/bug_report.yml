@@ -1,0 +1,77 @@
+name: Bug report / 问题报告
+description: 报告 LION 修改版（完整版或 lite）的问题
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。请先看 README 与使用说明，并确认问题可以复现。
+        **不要粘贴服务令牌、个人路径或包含敏感信息的日志。**
+  - type: input
+    id: addon_version
+    attributes:
+      label: 插件版本
+      description: 例如 3.3.7
+      placeholder: 3.3.7
+    validations:
+      required: true
+  - type: dropdown
+    id: variant
+    attributes:
+      label: 插件变体
+      options:
+        - 完整版 LION-modified
+        - 简洁版 LION-modified-lite
+        - 两个都装了
+    validations:
+      required: true
+  - type: input
+    id: nvda_version
+    attributes:
+      label: NVDA 版本
+      placeholder: "2026.2"
+    validations:
+      required: true
+  - type: input
+    id: service
+    attributes:
+      label: OCR 服务与端点
+      description: 只写地址类型/端点，不要写令牌。例如 本机 /ocr 或 局域网 /layout-parsing
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 越具体越好；如果与特定区域/裁剪/去重策略有关，请写清。
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望结果
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际结果
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志或截图
+      description: 可选。请先删除令牌、用户名、绝对路径等敏感信息。
+    validations:
+      required: false
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: 确认
+      options:
+        - label: 我没有在 issue 中粘贴服务令牌或其它密钥
+          required: true
+        - label: 我已确认这是 LION 修改版的问题，而不是上游 LION 或 OCR 服务本身
+          required: false

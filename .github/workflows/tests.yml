@@ -1,0 +1,43 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Check for private paths
+        shell: pwsh
+        run: |
+          $hits = git grep -n -I -E 'D:\\program|E:\\miniconda|C:\\Users' -- .
+          if ($LASTEXITCODE -eq 0) { $hits; exit 1 }
+          if ($LASTEXITCODE -gt 1) { exit $LASTEXITCODE }
+          Write-Host 'No private paths found.'
+
+      - name: Run offline test suite
+        env:
+          PYTHONIOENCODING: utf-8
+          PYTHONDONTWRITEBYTECODE: "1"
+          LION_SKIP_SERVICE_PROBE: "1"
+          LION_TEST_LIVE: "0"
+        run: python -m unittest discover -s tests -p "test_*.py"

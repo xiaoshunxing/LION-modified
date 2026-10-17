@@ -1,0 +1,396 @@
+# Simplified Chinese translation for the LION-modified add-on.
+# Copyright (C) 2026 LION contributors, xiaoshunxing
+# This file is distributed under the same license as the 'LION-modified' package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: 'LION-modified' '3.3.7'\n"
+"Report-Msgid-Bugs-To: 'nvda-translations@groups.io'\n"
+"POT-Creation-Date: 2026-10-18 02:00+0800\n"
+"PO-Revision-Date: 2026-10-18 02:00+0800\n"
+"Last-Translator: xiaoshunxing\n"
+"Language-Team: Chinese (Simplified) <nvda-translations@groups.io>\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: pygettext.py\n"
+
+#: globalPlugins/lion/lionGui.py
+msgid "External OCR service and OCR regions"
+msgstr "外部 OCR 服务与识别区域"
+
+#: globalPlugins/lion/lionGui.py
+msgid "OCR region"
+msgstr "识别区域"
+
+#: globalPlugins/lion/lionGui.py
+msgid "&Name:"
+msgstr "名称(&N)："
+
+#: globalPlugins/lion/lionGui.py
+msgid "&Target:"
+msgstr "识别目标(&T)："
+
+#: globalPlugins/lion/lionGui.py
+msgid "Crop &above (%):"
+msgstr "上方裁剪(&A)（%）："
+
+#: globalPlugins/lion/lionGui.py
+msgid "Crop &below (%):"
+msgstr "下方裁剪(&B)（%）："
+
+#: globalPlugins/lion/lionGui.py
+msgid "Crop &left (%):"
+msgstr "左侧裁剪(&L)（%）："
+
+#: globalPlugins/lion/lionGui.py
+msgid "Crop &right (%):"
+msgstr "右侧裁剪(&R)（%）："
+
+#: globalPlugins/lion/lionGui.py
+msgid "Left and right crop cannot add up to more than 100%."
+msgstr "左侧与右侧裁剪之和不能超过 100%。"
+
+#: globalPlugins/lion/lionGui.py
+msgid "Top and bottom crop cannot add up to more than 100%."
+msgstr "上方与下方裁剪之和不能超过 100%。"
+
+#: globalPlugins/lion/lionGui.py
+msgid "Invalid crop values"
+msgstr "裁剪数值无效"
+
+#: globalPlugins/lion/lionGui.py
+msgid "OCR regions:"
+msgstr "识别区域："
+
+#: globalPlugins/lion/lionGui.py
+msgid "Region"
+msgstr "区域"
+
+#: globalPlugins/lion/lionGui.py
+msgid "Target"
+msgstr "目标"
+
+#: globalPlugins/lion/lionGui.py
+msgid "Crop"
+msgstr "裁剪"
+
+#: globalPlugins/lion/lionGui.py
+msgid "Enable &all"
+msgstr "全部启用(&a)"
+
+#: globalPlugins/lion/lionGui.py
+msgid "Disable a&ll"
+msgstr "全部停用(&l)"
+
+#: globalPlugins/lion/lionGui.py
+msgid "&Add..."
+msgstr "添加(&A)…"
+
+#: globalPlugins/lion/lionGui.py
+msgid "&Edit..."
+msgstr "编辑(&E)…"
+
+#: globalPlugins/lion/lionGui.py
+msgid "&Remove"
+msgstr "删除(&R)"
+
+#: globalPlugins/lion/lionGui.py
+msgid "Move &up"
+msgstr "上移(&u)"
+
+#: globalPlugins/lion/lionGui.py
+msgid "Move &down"
+msgstr "下移(&d)"
+
+#: globalPlugins/lion/lionGui.py
+msgid "&Queue speech"
+msgstr "排队朗读(&Q)"
+
+#: globalPlugins/lion/lionGui.py
+msgid "Select a region first."
+msgstr "请先选中一个区域。"
+
+#: globalPlugins/lion/lionGui.py
+msgid "top %(up)d left %(left)d right %(right)d bottom %(down)d"
+msgstr "上%(up)d 左%(left)d 右%(right)d 下%(down)d"
+
+#: globalPlugins/lion/regions.py
+msgid "Area %d"
+msgstr "区域 %d"
+
+#: globalPlugins/lion/lionGui.py
+msgid "LION modified"
+msgstr "LION 修改版"
+
+#: globalPlugins/lion/__init__.py
+msgid "Lion"
+msgstr "Lion"
+
+#: globalPlugins/lion/__init__.py
+msgid "Toggle OCR"
+msgstr "开关OCR"
+
+#: globalPlugins/lion/__init__.py
+msgid "Please disable screen curtain before using OCR."
+msgstr "请在使用 OCR 之前关闭黑屏。"
+
+#: globalPlugins/lion/__init__.py
+msgid "lion started"
+msgstr "启动Lion"
+
+#: globalPlugins/lion/__init__.py
+msgid "lion stopped"
+msgstr "停止Lion"
+
+#: globalPlugins/lion/__init__.py
+msgid "LION: OCR service unavailable. %s"
+msgstr "LION：OCR 服务不可用。%s"
+
+#. Label of the text field holding the service endpoint.
+#: globalPlugins/lion/lionGui.py
+msgid "OCR &service URL:"
+msgstr "OCR 服务地址(&S)："
+
+#. Label of the editable combo box holding the model / OCR endpoint.
+#: globalPlugins/lion/lionGui.py
+msgid "&Model / endpoint:"
+msgstr "模型 / 端点(&M)："
+
+#: globalPlugins/lion/lionGui.py
+msgid "Service &token:"
+msgstr "服务令牌(&t)："
+
+#: globalPlugins/lion/lionGui.py
+msgid "&Test / get models"
+msgstr "测试 / 获取模型(&T)"
+
+#: globalPlugins/lion/lionGui.py
+msgid "Request &timeout (ms):"
+msgstr "请求超时(&o)（毫秒）："
+
+#: globalPlugins/lion/lionGui.py
+msgid "Image &format:"
+msgstr "图像格式(&f)："
+
+#: globalPlugins/lion/lionGui.py
+msgid "PNG (larger, lossless)"
+msgstr "PNG（体积大、无损）"
+
+#: globalPlugins/lion/lionGui.py
+msgid "JPEG (smaller, faster)"
+msgstr "JPEG（体积小、更快）"
+
+#: globalPlugins/lion/lionGui.py
+msgid "Return &visualisation image (slow)"
+msgstr "返回可视化图(&v)（慢）"
+
+#: globalPlugins/lion/lionGui.py
+msgid "Minimum recognition &score (%):"
+msgstr "最低识别分数(&s)（%）："
+
+#: globalPlugins/lion/lionGui.py
+msgid "Detection longest side (0 = default):"
+msgstr "检测最长边（0=默认）："
+
+#: globalPlugins/lion/lionGui.py
+msgid "Announce &errors once"
+msgstr "错误只提示&一次"
+
+#: globalPlugins/lion/lionGui.py
+msgid "OCR &interval (ms):"
+msgstr "识别间隔(ms):"
+
+# ---- 识别目标名称（regionModel.TARGET_LABELS 的取值，经 _() 翻译）----
+
+#: globalPlugins/lion/regions.py
+msgid "Navigator object"
+msgstr "当前对象"
+
+#: globalPlugins/lion/regions.py
+msgid "Whole Screen"
+msgstr "全屏幕"
+
+#: globalPlugins/lion/regions.py
+msgid "current window"
+msgstr "当前窗口"
+
+#: globalPlugins/lion/regions.py
+msgid "current control"
+msgstr "当前控件"
+
+# ---- 以下为旧版单区域设置的字符串（3.3.1 使用，保留以便旧版本回退）----
+
+#: globalPlugins/lion/lionGui.py
+msgid "&OCR target:"
+msgstr "识别目标:"
+
+#: globalPlugins/lion/lionGui.py
+msgid "&Text similarity threshold (%):"
+msgstr "文本相似度阈值(%):"
+
+#: globalPlugins/lion/lionGui.py
+msgid "Crop pixels from &above (%):"
+msgstr "从上方裁剪像素 (%):"
+
+#: globalPlugins/lion/lionGui.py
+msgid "crop pixels from &below(%):"
+msgstr "从下方裁剪像素(%):"
+
+#: globalPlugins/lion/lionGui.py
+msgid "crop pixels from &left(%):"
+msgstr "从左侧裁剪像素(%):"
+
+#: globalPlugins/lion/lionGui.py
+msgid "crop pixels from &right (%):"
+msgstr "从右侧裁剪像素(%):"
+
+#: globalPlugins/lion/lionGui.py
+msgid "Regular expression filters (one per &line):"
+msgstr "识别内容过滤(可用正则)。每行一条&l"
+
+#: globalPlugins/lion/lionGui.py
+msgid "Invalid service address."
+msgstr "服务地址无效。"
+
+#: globalPlugins/lion/lionGui.py
+msgid "Testing..."
+msgstr "正在测试……"
+
+# ---- 区域级去重策略（3.3.3）----
+
+#: globalPlugins/lion/lionGui.py
+msgid "De&duplication:"
+msgstr "去重方式(&d)："
+
+#: globalPlugins/lion/lionGui.py
+msgid "Classic (similarity)"
+msgstr "经典（相似度）"
+
+#: globalPlugins/lion/lionGui.py
+msgid "Read once when stable"
+msgstr "稳定后念一次"
+
+#: globalPlugins/lion/lionGui.py
+msgid "Read as it grows"
+msgstr "跟读增量"
+
+#: globalPlugins/lion/lionGui.py
+msgid "Off (every change)"
+msgstr "关闭（每次变化都念）"
+
+#: globalPlugins/lion/lionGui.py
+msgid "Stable after (ms):"
+msgstr "稳定阈值（毫秒）："
+
+# ---- 以下为错误与状态描述（用于日志与语音提示）----
+
+#: globalPlugins/lion/ocrClient.py
+msgid "HTTP status code: %s"
+msgstr "HTTP 状态码：%s"
+
+#: globalPlugins/lion/ocrClient.py
+msgid "Server message: %s"
+msgstr "服务端消息：%s"
+
+#: globalPlugins/lion/ocrClient.py
+msgid "Server hint: %s"
+msgstr "服务端提示：%s"
+
+#: globalPlugins/lion/ocrClient.py
+msgid "Address: %s"
+msgstr "地址：%s"
+
+#: globalPlugins/lion/ocrClient.py
+msgid "; "
+msgstr "；"
+
+#: globalPlugins/lion/ocrClient.py
+msgid "Unauthorized"
+msgstr "未授权"
+
+#: globalPlugins/lion/ocrClient.py
+msgid "Unknown error"
+msgstr "未知错误"
+
+#: globalPlugins/lion/ocrClient.py
+msgid "OCR service address is empty or invalid."
+msgstr "OCR 服务地址为空或无效。"
+
+#: globalPlugins/lion/ocrClient.py
+msgid "Service responded with HTTP status code: %s. %s"
+msgstr "服务返回 HTTP 状态码：%s。%s"
+
+#: globalPlugins/lion/ocrClient.py
+msgid "Request timed out after %s seconds"
+msgstr "请求超过 %s 秒未响应，已超时"
+
+#: globalPlugins/lion/ocrClient.py
+msgid "Connection failed: %s"
+msgstr "连接失败：%s"
+
+#: globalPlugins/lion/ocrClient.py
+msgid "Invalid JSON response: %s"
+msgstr "返回内容不是合法 JSON：%s"
+
+#: globalPlugins/lion/ocrClient.py
+msgid "Unexpected response type."
+msgstr "返回内容类型不符预期。"
+
+#: globalPlugins/lion/ocrClient.py
+msgid "No OCR result found in the response."
+msgstr "返回内容里没有 OCR 结果。"
+
+#: globalPlugins/lion/ocrClient.py
+msgid "Service responded with HTTP status code: %s"
+msgstr "服务返回 HTTP 状态码：%s"
+
+#: globalPlugins/lion/ocrClient.py
+msgid "Connected (HTTP %s)."
+msgstr "连接成功（HTTP %s）。"
+
+#: globalPlugins/lion/ocrClient.py
+msgid "Connected and OCR request succeeded (HTTP %s)."
+msgstr "连接成功，且 OCR 请求已成功（HTTP %s）。"
+
+#: globalPlugins/lion/lionGui.py
+msgid "Found %d models."
+msgstr "发现 %d 个模型。"
+
+#: globalPlugins/lion/lionGui.py
+msgid "Source: OpenAPI endpoints"
+msgstr "来源：OpenAPI 端点"
+
+#: globalPlugins/lion/lionGui.py
+msgid "Source: %s."
+msgstr "来源：%s。"
+
+#: globalPlugins/lion/lionGui.py
+msgid "Connected; model list unavailable: %s"
+msgstr "已连接；无法获取模型列表：%s"
+
+#: globalPlugins/lion/lionGui.py
+msgid "Recognition test skipped (PaddleOCR-VL is slow)."
+msgstr "已跳过识别测试（PaddleOCR-VL 较慢）。"
+
+#: globalPlugins/lion/ocrClient.py
+msgid "Unauthorized: check the service token."
+msgstr "未授权：请检查服务令牌。"
+
+#: globalPlugins/lion/ocrClient.py
+msgid "No models found in the response."
+msgstr "响应里没有可用的模型。"
+
+#: globalPlugins/lion/ocrClient.py
+msgid "No OCR endpoint found on the service."
+msgstr "服务上没有找到可用的 OCR 端点。"
+
+#: globalPlugins/lion/ocrClient.py
+msgid "Token accepted (HTTP %s)."
+msgstr "令牌有效（HTTP %s）。"
+
+#: globalPlugins/lion/ocrClient.py
+msgid "Endpoint not found: %s"
+msgstr "端点不存在：%s"

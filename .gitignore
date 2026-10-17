@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Build / release outputs
+dist/
+build/
+tests/artifacts/
+*.nvda-addon
+
+# Local logs / temp
+*.log
+.tmp*/
+.tmp-*/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Environments
+.venv/
+venv/
+env/
+
+# Secrets - never commit
+.env
+api_token.txt
+*.token
+*.secret

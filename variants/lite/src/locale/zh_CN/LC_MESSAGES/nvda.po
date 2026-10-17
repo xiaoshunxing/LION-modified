@@ -1,0 +1,256 @@
+# Simplified Chinese translation for the LION-modified-lite add-on.
+# Copyright (C) 2026 LION contributors, xiaoshunxing
+# This file is distributed under the same license as the 'LION-modified-lite' package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: 'LION-modified-lite' '3.3.7'\n"
+"POT-Creation-Date: 2026-10-18 03:20+0800\n"
+"PO-Revision-Date: 2026-10-18 03:20+0800\n"
+"Last-Translator: xiaoshunxing\n"
+"Language-Team: Chinese (Simplified)\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: globalPlugins/lionlite
+msgid "LION modified lite"
+msgstr "LION 修改版 lite"
+
+#: globalPlugins/lionlite
+msgid "Toggle OCR"
+msgstr "开关OCR"
+
+#: globalPlugins/lionlite
+msgid "Please disable screen curtain before using OCR."
+msgstr "请在使用 OCR 之前关闭黑屏。"
+
+#: globalPlugins/lionlite
+msgid "lion started"
+msgstr "启动Lion"
+
+#: globalPlugins/lionlite
+msgid "lion stopped"
+msgstr "停止Lion"
+
+#: globalPlugins/lionlite
+msgid "LION: OCR service unavailable. %s"
+msgstr "LION：OCR 服务不可用。%s"
+
+#: globalPlugins/lionlite
+msgid "External OCR service and OCR area"
+msgstr "外部 OCR 服务与识别区域"
+
+#: globalPlugins/lionlite
+msgid "OCR &service URL:"
+msgstr "OCR 服务地址(&S)："
+
+#: globalPlugins/lionlite
+msgid "&Model / endpoint:"
+msgstr "模型 / 端点(&M)："
+
+#: globalPlugins/lionlite
+msgid "Service &token:"
+msgstr "服务令牌(&t)："
+
+#: globalPlugins/lionlite
+msgid "&Test / get models"
+msgstr "测试 / 获取模型(&T)"
+
+#: globalPlugins/lionlite
+msgid "Request &timeout (ms):"
+msgstr "请求超时(&o)（毫秒）："
+
+#: globalPlugins/lionlite
+msgid "Image &format:"
+msgstr "图像格式(&f)："
+
+#: globalPlugins/lionlite
+msgid "PNG (larger, lossless)"
+msgstr "PNG（体积大、无损）"
+
+#: globalPlugins/lionlite
+msgid "JPEG (smaller, faster)"
+msgstr "JPEG（体积小、更快）"
+
+#: globalPlugins/lionlite
+msgid "Return &visualisation image (slow)"
+msgstr "返回可视化图(&v)（慢）"
+
+#: globalPlugins/lionlite
+msgid "Minimum &score (%):"
+msgstr "最低识别分数(&s)（%）："
+
+#: globalPlugins/lionlite
+msgid "Detection longest side (0 = default):"
+msgstr "检测最长边（0=默认）："
+
+#: globalPlugins/lionlite
+msgid "Announce &errors once"
+msgstr "错误只提示&一次"
+
+#: globalPlugins/lionlite
+msgid "OCR &interval (ms):"
+msgstr "识别间隔(ms):"
+
+#: globalPlugins/lionlite
+msgid "&OCR target:"
+msgstr "识别目标:"
+
+#: globalPlugins/lionlite
+msgid "Navigator object"
+msgstr "当前对象"
+
+#: globalPlugins/lionlite
+msgid "Whole Screen"
+msgstr "全屏幕"
+
+#: globalPlugins/lionlite
+msgid "current window"
+msgstr "当前窗口"
+
+#: globalPlugins/lionlite
+msgid "current control"
+msgstr "当前控件"
+
+#: globalPlugins/lionlite
+msgid "&Text similarity threshold (%):"
+msgstr "文本相似度阈值(%):"
+
+#: globalPlugins/lionlite
+msgid "Crop &above (%):"
+msgstr "上方裁剪(&A)（%）："
+
+#: globalPlugins/lionlite
+msgid "Crop &below (%):"
+msgstr "下方裁剪(&B)（%）："
+
+#: globalPlugins/lionlite
+msgid "Crop &left (%):"
+msgstr "左侧裁剪(&L)（%）："
+
+#: globalPlugins/lionlite
+msgid "Crop &right (%):"
+msgstr "右侧裁剪(&R)（%）："
+
+#: globalPlugins/lionlite
+msgid "Regular expression filters (one per &line):"
+msgstr "识别内容过滤(可用正则)。每行一条&l"
+
+#: globalPlugins/lionlite
+msgid "Invalid service address."
+msgstr "服务地址无效。"
+
+#: globalPlugins/lionlite
+msgid "Testing..."
+msgstr "正在测试……"
+
+#: globalPlugins/lionlite
+msgid "Found %d models."
+msgstr "发现 %d 个模型。"
+
+#: globalPlugins/lionlite
+msgid "Source: OpenAPI endpoints"
+msgstr "来源：OpenAPI 端点"
+
+#: globalPlugins/lionlite
+msgid "Source: %s."
+msgstr "来源：%s。"
+
+#: globalPlugins/lionlite
+msgid "Connected; model list unavailable: %s"
+msgstr "已连接；无法获取模型列表：%s"
+
+#: globalPlugins/lionlite
+msgid "; "
+msgstr "；"
+
+#: globalPlugins/lionlite
+msgid "Recognition test skipped (PaddleOCR-VL is slow)."
+msgstr "已跳过识别测试（PaddleOCR-VL 较慢）。"
+
+#: globalPlugins/lionlite
+msgid "OCR service address is empty or invalid."
+msgstr "OCR 服务地址为空或无效。"
+
+#: globalPlugins/lionlite
+msgid "HTTP status code: %s"
+msgstr "HTTP 状态码：%s"
+
+#: globalPlugins/lionlite
+msgid "Connection failed: %s"
+msgstr "连接失败：%s"
+
+#: globalPlugins/lionlite
+msgid "Invalid JSON response: %s"
+msgstr "返回内容不是合法 JSON：%s"
+
+#: globalPlugins/lionlite
+msgid "Server message: %s"
+msgstr "服务端消息：%s"
+
+#: globalPlugins/lionlite
+msgid "Server hint: %s"
+msgstr "服务端提示：%s"
+
+#: globalPlugins/lionlite
+msgid "Address: %s"
+msgstr "地址：%s"
+
+#: globalPlugins/lionlite
+msgid "Unauthorized"
+msgstr "未授权"
+
+#: globalPlugins/lionlite
+msgid "Unknown error"
+msgstr "未知错误"
+
+#: globalPlugins/lionlite
+msgid "Service responded with HTTP status code: %s. %s"
+msgstr "服务返回 HTTP 状态码：%s。%s"
+
+#: globalPlugins/lionlite
+msgid "Request timed out after %s seconds"
+msgstr "请求超过 %s 秒未响应，已超时"
+
+#: globalPlugins/lionlite
+msgid "Unexpected response type."
+msgstr "返回内容类型不符预期。"
+
+#: globalPlugins/lionlite
+msgid "No OCR result found in the response."
+msgstr "返回内容里没有 OCR 结果。"
+
+#: globalPlugins/lionlite
+msgid "Unauthorized: check the service token."
+msgstr "未授权：请检查服务令牌。"
+
+#: globalPlugins/lionlite
+msgid "No models found in the response."
+msgstr "响应里没有可用的模型。"
+
+#: globalPlugins/lionlite
+msgid "No OCR endpoint found on the service."
+msgstr "服务上没有找到可用的 OCR 端点。"
+
+#: globalPlugins/lionlite
+msgid "Token accepted (HTTP %s)."
+msgstr "令牌有效（HTTP %s）。"
+
+#: globalPlugins/lionlite
+msgid "Endpoint not found: %s"
+msgstr "端点不存在：%s"
+
+#: globalPlugins/lionlite
+msgid "Service responded with HTTP status code: %s"
+msgstr "服务返回 HTTP 状态码：%s"
+
+#: globalPlugins/lionlite
+msgid "Connected (HTTP %s)."
+msgstr "连接成功（HTTP %s）。"
+
+#: globalPlugins/lionlite
+msgid "Connected and OCR request succeeded (HTTP %s)."
+msgstr "连接成功，且 OCR 请求已成功（HTTP %s）。"
+

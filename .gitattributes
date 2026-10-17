@@ -1,0 +1,21 @@
+* text=auto
+
+*.py text
+*.md text
+*.ini text
+*.po text eol=lf
+*.html text
+*.css text
+*.ps1 text
+*.yml text
+*.yaml text
+*.json text
+*.txt text
+
+*.mo binary
+*.nvda-addon binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.zip binary

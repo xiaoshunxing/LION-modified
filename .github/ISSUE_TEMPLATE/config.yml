@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 使用说明 / README
+    url: https://github.com/xiaoshunxing/LION-modified#readme
+    about: 安装、设置、版本说明与常见问题
+  - name: 开发文档
+    url: https://github.com/xiaoshunxing/LION-modified/blob/main/docs/开发文档-中文.md
+    about: 架构、测试、打包与发布流程
+  - name: 安全报告
+    url: https://github.com/xiaoshunxing/LION-modified/security/policy
+    about: 请私下报告安全问题，不要开公开 issue
