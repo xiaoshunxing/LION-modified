@@ -190,6 +190,24 @@ class ManifestTests(LiteHarness):
 		self.assertIn("xiaoshunxing", manifest["author"])
 		self.assertIn("Stefan Moisei", manifest["author"], "上游作者必须保留")
 
+	@requiresConfigObj
+	def testLocalisedManifestParses(self):
+		"""中文翻译清单必须能被 ConfigObj 解析；NVDA 安装时会读取它。"""
+		path = os.path.join(LITE_SRC, "locale", "zh_CN", "manifest.ini")
+		with open(path, "rb") as handle:
+			translated = ConfigObj(handle, encoding="utf-8", default_encoding="utf-8")
+		self.assertEqual(str(translated["summary"]).strip('"'), "LION 修改版 lite")
+
+		if os.path.isfile(LITE_BUNDLE):
+			import zipfile
+
+			with zipfile.ZipFile(LITE_BUNDLE) as archive:
+				raw = archive.read("locale/zh_CN/manifest.ini")
+			translated = ConfigObj(
+				raw.decode("utf-8").splitlines(), encoding="utf-8", default_encoding="utf-8"
+			)
+			self.assertEqual(str(translated["summary"]).strip('"'), "LION 修改版 lite")
+
 	def testConfigSectionIsIndependent(self):
 		self.assertEqual(self.package.CONFIG_SECTION, LITE_CONFIG_SECTION)
 		# 与完整版的配置节不能相同

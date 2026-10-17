@@ -461,12 +461,12 @@ default one-second interval, a "subtitle strip" plus a "chat" area costs about 1
 | `test_ocr_client.py` | 66 | URL normalisation/composition/migration split, payload, response parsing (incl. PaddleOCR-VL layout blocks), three-tier model discovery, token verification, all stub-server error paths, `testConnection`, 4 live-service cases |
 | `test_regions.py` | 43 | JSON round trip and tolerance, normalisation and bounds, four-way crop geometry, base-resolution fallbacks, legacy migration, state pruning, list row text, **dedup field normalisation** |
 | `test_dedup.py` | 102 | **the four dedup strategies** plus 3.3.5 regressions: typewriter whole-line, stability window, clear-then-repeat, line-by-line append, whole-line replacement, truncated tail, 10 s forced release, punctuation boundaries, English words not split, state lifecycle (virtual time), incremental-jitter regressions, fuzzy anchor, punctuation-only filter, digit changes |
-| `test_lite_variant.py` | 16 | lite edition: manifest identity, isolated config section, 17 settings, no client copy, staged client byte-identical to the full edition, model composition, concise wording, translation coverage, bundle checks |
+| `test_lite_variant.py` | 17 | lite edition: manifest identity, localised-manifest parsing, isolated config section, 17 settings, no client copy, staged client byte-identical to the full edition, model composition, concise wording, translation coverage, bundle checks |
 | `test_plugin_integration.py` | 71 | config-section independence; area migration and **service-address migration (3.3.6)**; only checked areas captured; per-area crop and target; **different strategies per area**; per-area dedup and failure isolation; queue/non-queue priorities and order; state cleanup after edit/remove; regex filtering and whitespace collapsing; toggle script; loop exit; **1 live end-to-end case** |
 | `test_manifest_and_config.py` | 32 | manifest fields and apiVersion; **original description/log first, fork below**; confspec defaults, out-of-range, booleans, JSON-with-commas not split; source hygiene (no engine/PIL/bytecode remnants, `regions.py` free of GUI imports, `dedup.py` free of NVDA imports, translatable strings, .po contents) |
 | `test_package.py` | 17 | artifact naming, forbidden entries, required entries (incl. `regions.py`/`dedup.py`), no original override, size budget, doc references, **readme original sections before the fork section**, **manifest original block first**, translation catalog, artifact matches `src/` file-for-file |
 
-**347 cases total**, all runnable with a single `unittest discover`.
+**348 cases total**, all runnable with a single `unittest discover`.
 
 **How the plugin is tested without NVDA**: `test_plugin_integration.py` replaces
 `gui`/`wx`/`api`/`ui`/`tones`/`speech`/`scriptHandler`/`globalPluginHandler`/`screenCurtain`/`locationHelper`/`PIL`
