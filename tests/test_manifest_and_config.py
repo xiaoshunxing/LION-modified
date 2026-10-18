@@ -30,10 +30,6 @@ nvda_stubs.install()
 # 不往 conda 环境里装包：用 nvda_stubs.loadConfigObj() 统一解析（优先环境里已安装的
 # 版本，其次 tests/vendor 里的源码副本）。全部不可用时相关用例标记为 skip。
 
-NVDA_LIBRARY_ZIP = os.environ.get(
-	"LION_NVDA_LIBRARY_ZIP",
-	r"C:\Program Files\NVDA\library.zip",
-)
 _configobj = nvda_stubs.loadConfigObj()
 CONFIGOBJ_SOURCE = "vendored copy or installed package" if _configobj else "unavailable"
 requiresConfigObj = unittest.skipIf(

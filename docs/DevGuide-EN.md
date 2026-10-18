@@ -54,7 +54,7 @@ way to hear several areas at once.
 ### Key decisions and why
 
 1. **stdlib `urllib.request`, not `requests`.** NVDA ships `requests`/`urllib3` inside
-   `C:\Program Files\NVDA\library.zip`, but those are NVDA's internal, versioned libraries. An add-on should not
+   `<NVDA install dir>\library.zip`, but those are NVDA's internal, versioned libraries. An add-on should not
    depend on the host's private packaging. The cost: no connection pooling (irrelevant on loopback) and
    hand-written timeout/error classification.
 

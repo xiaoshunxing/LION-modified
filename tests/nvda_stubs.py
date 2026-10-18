@@ -187,9 +187,11 @@ def conf() -> ConfStub:
 # 顺序：environment 已安装 -> 本目录 vendor/configobj。
 
 VENDOR = os.path.join(HERE, "vendor")
+# NVDA 安装目录下的 library.zip 位置：优先环境变量，其次由 ProgramFiles 推导，
+# 不写死盘符，保证仓库可便携使用。
 NVDA_LIBRARY_ZIP = os.environ.get(
 	"LION_NVDA_LIBRARY_ZIP",
-	r"C:\Program Files\NVDA\library.zip",
+	os.path.join(os.environ.get("ProgramFiles", ""), "NVDA", "library.zip"),
 )
 
 
