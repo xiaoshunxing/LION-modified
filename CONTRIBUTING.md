@@ -64,4 +64,8 @@ pwsh -File scripts\build_addon.ps1 -Variant lite -Python python
 
 请不要在公开 issue 里贴令牌或敏感日志，按 [SECURITY.md](SECURITY.md) 私下报告。
 
-AI 创作声明：本文案由我们与 AI 共同创作；模型：DeepSeek-V4.1-Flash。
+AI 创作声明：本文案由 AI 参与创作。
+
+代码声明：本修改版代码在原版 LION 基础上由 AI 参与编写。
+
+模型版本：DeepSeek-V4.1-Flash。

@@ -25,9 +25,8 @@
 ## 功能
 
 - 定时识别屏幕指定区域，只朗读变化明显的文本；适用于字幕、游戏对话和无法直接读取的界面文字。
-- 完整版支持多个区域，每个区域可单独选择识别目标与裁剪。
-- 分区去重：影视字幕用“经典”，逐字出现的 RPG 对话用“稳定后朗读”，长对话用“跟读增量”。
-- 外部服务：服务地址 + 模型/端点，支持 `/ocr`、`/ocr-acc`、`/layout-parsing` 或自定义 URL。
+- 完整版另有多区域、分区去重和排队朗读，差异见上表。
+- 外部服务：服务地址 + 模型/端点，支持常见端点或自定义 URL。
 - “测试 / 获取模型”：探活 → 模型列表 → 令牌校验 → 快端点识别测试。
 
 ## 环境要求
@@ -96,5 +95,16 @@ are provided: the full `LION-modified` and the simpler `LION-modified-lite`. Lic
 **GPL-2.0-or-later**; see [COPYING.txt](COPYING.txt) and [NOTICE.md](NOTICE.md). We are not affiliated with
 NV Access or the original authors.
 
-AI 创作声明：本文案由我们与 AI 共同创作；模型：DeepSeek-V4.1-Flash。详见 [AI-DISCLOSURE.md](AI-DISCLOSURE.md)。
-AI disclosure: This text was created by us with AI assistance; model: DeepSeek-V4.1-Flash.
+AI 创作声明：本文案由 AI 参与创作。
+
+代码声明：本修改版代码在原版 LION 基础上由 AI 参与编写。
+
+模型版本：DeepSeek-V4.1-Flash。
+
+详见 [AI-DISCLOSURE.md](AI-DISCLOSURE.md)。
+
+AI disclosure: This text was created with AI participation.
+
+Code disclosure: The modified code is based on the original LION and was written with AI participation.
+
+Model version: DeepSeek-V4.1-Flash.

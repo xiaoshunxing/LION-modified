@@ -821,4 +821,8 @@ Releases.
   `locale/zh_CN/manifest.ini`.
 - Releases must stay GPL v2+ and must not remove the original authors.
 
-AI disclosure: This text was created by us with AI assistance; model: DeepSeek-V4.1-Flash.
+AI disclosure: This text was created with AI participation.
+
+Code disclosure: The modified code is based on the original LION and was written with AI participation.
+
+Model version: DeepSeek-V4.1-Flash.

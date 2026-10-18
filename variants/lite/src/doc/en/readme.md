@@ -40,11 +40,8 @@ fast-endpoint recognition test in one go.
 
 ### Service
 
-1. **OCR service URL** – base address without endpoint; the model may also be a full URL pointing at another machine.
-2. **Model / endpoint** – editable combo box, initial endpoint `/ocr`.
-3. **Service token** – masked; empty means no authorization header.
-4. **Request timeout (ms)** – initial value 15000; raise it for `/layout-parsing` (max 120000).
-5. **Image format**, **return visualisation image (slow)**, **minimum score**, **detection longest side**, **announce errors once** – as in the full edition; detection longest side and minimum score have no effect on `/layout-parsing` (the server ignores them).
+1. **Request timeout (ms)** – initial value 15000; raise it for `/layout-parsing` (max 120000).
+2. **Image format**, **return visualisation image (slow)**, **minimum score**, **detection longest side**, **announce errors once** – as in the full edition; detection longest side and minimum score have no effect on `/layout-parsing` (the server ignores them).
 
 ### Recognition
 
@@ -66,4 +63,6 @@ The major version follows upstream **3.3** (original LION 3.3.0); releases use *
 - Original authorship is fully preserved; lite edition and UI wording by xiaoshunxing.
 - This add-on is based on LION; we are not affiliated with NV Access or the original authors.
 
-AI disclosure: New text in this modification was created by us with AI assistance; upstream original text is excluded. Model: DeepSeek-V4.1-Flash.
+AI disclosure: New text in this modification was created with AI participation; upstream original text is excluded.
+
+Model version: DeepSeek-V4.1-Flash.
