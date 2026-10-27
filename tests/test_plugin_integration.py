@@ -121,16 +121,24 @@ def regionJson(regions) -> str:
 
 
 class FakeImage:
-	def __init__(self, mode: str = "RGB", sink: list | None = None):
+	def __init__(self, mode: str = "RGB", sink: list | None = None, crops: list | None = None, size=(0, 0)):
 		self.mode = mode
 		self.sink = sink if sink is not None else []
+		self.crops = crops if crops is not None else []
+		self.size = size
 
 	def save(self, buffered, format="PNG", **kwargs):  # noqa: A002 - 对齐 PIL 接口
 		self.sink.append({"format": format, **kwargs})
 		buffered.write(b"encoded-image")
 
 	def convert(self, mode: str):
-		return FakeImage(mode, self.sink)
+		return FakeImage(mode, self.sink, self.crops, self.size)
+
+	def crop(self, box):
+		"""模拟 PIL 的裁剪：记录裁剪框，返回对应尺寸的假图。"""
+		self.crops.append(box)
+		left, top, right, bottom = box
+		return FakeImage(self.mode, self.sink, self.crops, (right - left, bottom - top))
 
 
 class FakeClient:
@@ -257,6 +265,7 @@ class Harness(unittest.TestCase):
 		self.modules["ui"].message = self.recordMessage
 		self.grabbed: list = []
 		self.saveCalls: list = []
+		self.crops: list = []
 		self.modules["PIL"].ImageGrab.grab = self.grab
 		self.plugin.config.conf._sections.clear()
 		self.section = self.plugin.config.conf["LION-modified"]
@@ -281,7 +290,9 @@ class Harness(unittest.TestCase):
 
 	def captureImage(self, bbox=None):
 		"""返回"屏幕内容"。默认是可控的假图像；在线用例会换成真实截图。"""
-		return FakeImage(sink=self.saveCalls)
+		width = (bbox[2] - bbox[0]) if bbox else SCREEN[0]
+		height = (bbox[3] - bbox[1]) if bbox else SCREEN[1]
+		return FakeImage(sink=self.saveCalls, crops=self.crops, size=(width, height))
 
 	def setRegions(self, regions):
 		self.section["regions"] = regionJson(regions)
@@ -317,10 +328,10 @@ class ConfigSectionTests(Harness):
 
 	def testSpecHasEveryKey(self):
 		spec = self.plugin.config.conf.spec.sections["LION-modified"]
-		self.assertEqual(len(spec), 14)
+		self.assertEqual(len(spec), 15)
 		for key in ("serviceUrl", "model", "serviceToken", "requestTimeout", "imageFormat", "visualize",
-					"scoreThresh", "detLimitSideLen", "notifyOnError", "regions", "queueSpeech",
-					"interval", "threshold", "regexFilters"):
+					"scoreThresh", "detLimitSideLen", "notifyOnError", "regions", "mergeCapture",
+					"queueSpeech", "interval", "threshold", "regexFilters"):
 			self.assertIn(key, spec)
 
 	def testLegacyKeysAreGone(self):
@@ -369,6 +380,68 @@ class ConfigSectionTests(Harness):
 	def testPanelClassIsRegisteredType(self):
 		self.assertTrue(issubclass(self.plugin.LIONSettingsPanel, object))
 		self.assertEqual(self.plugin.LIONSettingsPanel.title, "LION modified")
+
+
+class PanelRegistrationTests(Harness):
+	"""设置面板注册必须幂等（插件更新/模块重载时 __init__ 可能被多次调用）。"""
+
+	def panels(self):
+		return self.modules["gui"].settingsDialogs.NVDASettingsDialog.categoryClasses
+
+	def testRegistrationIsIdempotent(self):
+		panelClass = self.plugin.LIONSettingsPanel
+		self.panels().clear()
+		self.addCleanup(self.panels().clear)
+		self.plugin.registerSettingsPanel(panelClass)
+		self.plugin.registerSettingsPanel(panelClass)
+		self.assertEqual(self.panels(), [panelClass])
+		self.plugin.unregisterSettingsPanel(panelClass)
+		self.plugin.unregisterSettingsPanel(panelClass)
+		self.assertEqual(self.panels(), [])
+
+
+class BaseOnlySectionTests(Harness):
+	"""配置节固定为全局：运行期兜底登记（NVDA 2026.3+）与旧版本跳过。"""
+
+	def setUp(self):
+		super().setUp()
+		self.conf = self.plugin.config.conf
+		self.addCleanup(self.plugin.config.__dict__.pop, "configSections", None)
+		self.addCleanup(lambda: self.conf.__dict__.pop("BASE_ONLY_SECTIONS", None))
+		self.addCleanup(lambda: self.conf.__dict__.pop("profiles", None))
+
+	def installFakeApi(self):
+		calls = []
+
+		def registerSection(*args, **kwargs):
+			calls.append((args, kwargs))
+
+		self.plugin.config.configSections = types.SimpleNamespace(registerSection=registerSection)
+		return calls
+
+	def testRegistersWhenSectionIsNotBaseOnly(self):
+		calls = self.installFakeApi()
+		self.conf.BASE_ONLY_SECTIONS = set()
+		self.plugin.ensureBaseOnlySection()
+		self.assertEqual(len(calls), 1)
+		args, kwargs = calls[0]
+		self.assertEqual(args[0], "LION-modified")
+		self.assertIs(kwargs["isBaseOnly"], True)
+
+	def testSkipsWhenAlreadyBaseOnly(self):
+		calls = self.installFakeApi()
+		self.conf.BASE_ONLY_SECTIONS = {"LION-modified"}
+		self.plugin.ensureBaseOnlySection()
+		self.assertEqual(calls, [])
+
+	def testSkipsWithoutApi(self):
+		self.plugin.config.__dict__.pop("configSections", None)
+		self.plugin.ensureBaseOnlySection()  # 不抛异常即可
+
+	def testProfileOverrideDetectionDoesNotRaise(self):
+		self.conf.BASE_ONLY_SECTIONS = {"LION-modified"}
+		self.conf.profiles = [object(), {"LION-modified": {"threshold": 0.3}}]
+		self.plugin.reportProfileOverrides()  # 只记录日志，不抛异常
 
 
 class MigrationTests(Harness):
@@ -516,7 +589,7 @@ class RegionSelectionTests(Harness):
 		plugin = self.makePlugin([{"code": 100, "data": []}])
 		instance = self.modules["api"].getForegroundObject
 		self.modules["api"].getForegroundObject = lambda: types.SimpleNamespace(
-			location=self.plugin.locationHelper.RectLTWH(100, 200, 400, 300)
+			location=self.modules["locationHelper"].RectLTWH(100, 200, 400, 300)
 		)
 		self.addCleanup(setattr, self.modules["api"], "getForegroundObject", instance)
 		plugin.OcrScreen()
@@ -527,6 +600,138 @@ class RegionSelectionTests(Harness):
 		plugin = self.makePlugin([{"code": 100, "data": []}])
 		plugin.OcrScreen()
 		self.assertEqual(tuple(self.grabbed[0]), (0, 0, SCREEN[0], SCREEN[1]))
+
+
+class MergedCaptureTests(Harness):
+	"""合并区域截图（mergeCapture）：默认逐区域抓屏，开启后一次抓并集再裁剪。"""
+
+	def twoFarApartRegions(self):
+		# 上方一条（裁剪掉上方 70%）+ 下方一条（裁剪掉下方 80%），两条几乎不重叠
+		self.setRegions([
+			("上方", 1, 70, 0, 0, 0),
+			("下方", 1, 0, 80, 0, 0),
+		])
+
+	def testDisabledByDefault(self):
+		self.twoFarApartRegions()
+		self.assertIs(self.section["mergeCapture"], False)
+		plugin = self.makePlugin([{"code": 100, "data": []}, {"code": 100, "data": []}])
+		plugin.OcrScreen()
+		self.assertEqual(len(self.grabbed), 2, "关闭时应逐区域抓屏")
+		self.assertEqual(self.crops, [])
+
+	def testEnabledGrabsUnionOnceAndCropsPerRegion(self):
+		self.twoFarApartRegions()
+		self.section["mergeCapture"] = True
+		plugin = self.makePlugin([{"code": 100, "data": []}, {"code": 100, "data": []}])
+		plugin.OcrScreen()
+		self.assertEqual(len(self.grabbed), 1, "开启后只应抓一次并集")
+		self.assertEqual(tuple(self.grabbed[0]), (0, 0, SCREEN[0], SCREEN[1]))
+		self.assertEqual(len(self.crops), 2, "每个区域各裁剪一次")
+		self.assertEqual(self.crops[0], (0, 756, 1920, 1080))
+		self.assertEqual(self.crops[1], (0, 0, 1920, 216))
+
+	def testEnabledStillSpeaksChangedRegions(self):
+		self.twoFarApartRegions()
+		self.section["mergeCapture"] = True
+		self.section["queueSpeech"] = True
+		plugin = self.makePlugin([
+			{"code": 100, "data": [{"text": "上方的文字", "score": 0.9}]},
+			{"code": 100, "data": [{"text": "下方的文字", "score": 0.9}]},
+		])
+		plugin.OcrScreen()
+		self.assertEqual(self.texts(), ["上方的文字", "下方的文字"])
+
+	def testSingleRegionIgnoresMergeOption(self):
+		self.setRegions([("唯一", 1, 70, 0, 0, 0)])
+		self.section["mergeCapture"] = True
+		plugin = self.makePlugin([{"code": 100, "data": []}])
+		plugin.OcrScreen()
+		self.assertEqual(len(self.grabbed), 1)
+		self.assertEqual(tuple(self.grabbed[0]), (0, 756, 1920, 1080))
+		self.assertEqual(self.crops, [], "单区域无需合并截图")
+
+	def testMergeFailureFallsBackToPerRegionCapture(self):
+		self.twoFarApartRegions()
+		self.section["mergeCapture"] = True
+		plugin = self.makePlugin([{"code": 100, "data": []}, {"code": 100, "data": []}])
+		realGrab = self.grab
+		calls = []
+
+		def flakyGrab(bbox=None):
+			calls.append(bbox)
+			if len(calls) == 1:
+				raise OSError("merge capture failed")
+			return realGrab(bbox)
+
+		self.modules["PIL"].ImageGrab.grab = flakyGrab
+		plugin.OcrScreen()
+		self.assertEqual(len(calls), 3, "一次合并失败 + 两次逐区域抓屏")
+		self.assertEqual(len(self.grabbed), 2)
+		self.assertEqual(self.crops, [])
+
+
+class PerRegionThresholdTests(Harness):
+	"""每区域经典阈值：只影响该区域，且只对 classic 生效。"""
+
+	def setRegionsWithThreshold(self, specs):
+		"""specs: [(name, dedup, override)]；其余字段取默认。"""
+		items = json.loads(
+			regionJson([(name, 1, 0, 0, 0, 0, True, dedup) for name, dedup, _override in specs])
+		)
+		for item, (_name, _dedup, override) in zip(items, specs):
+			item["classicThreshold"] = override
+		self.section["regions"] = json.dumps(items, ensure_ascii=False)
+
+	def testOverrideOnlyAffectsItsRegion(self):
+		self.section["queueSpeech"] = True
+		self.section["threshold"] = 0.5
+		self.setRegionsWithThreshold([("A", "classic", 0.9), ("B", "classic", None)])
+		plugin = self.makePlugin([
+			{"code": 100, "data": [{"text": "第1回合，攻击力 100", "score": 0.9}]},
+			{"code": 100, "data": [{"text": "第1回合，攻击力 100", "score": 0.9}]},
+		])
+		plugin.OcrScreen()
+		self.pending.extend([
+			{"code": 100, "data": [{"text": "第2回合，攻击力 90", "score": 0.9}]},
+			{"code": 100, "data": [{"text": "第2回合，攻击力 90", "score": 0.9}]},
+		])
+		plugin.OcrScreen()
+		# A 覆盖 0.9：相似度约 0.783 < 0.9 → 朗读；B 继承 0.5：不朗读
+		self.assertEqual(
+			self.texts(),
+			["第1回合，攻击力 100", "第1回合，攻击力 100", "第2回合，攻击力 90"],
+		)
+
+	def testInheritedRegionFollowsGlobal(self):
+		self.section["queueSpeech"] = True
+		self.section["threshold"] = 0.9
+		self.setRegionsWithThreshold([("继承", "classic", None)])
+		plugin = self.makePlugin([{"code": 100, "data": [{"text": "第1回合，攻击力 100", "score": 0.9}]}])
+		plugin.OcrScreen()
+		self.pending.extend([{"code": 100, "data": [{"text": "第2回合，攻击力 90", "score": 0.9}]}])
+		plugin.OcrScreen()
+		self.assertEqual(self.texts(), ["第1回合，攻击力 100", "第2回合，攻击力 90"])
+
+	def testOtherModesIgnoreOverride(self):
+		"""commit 不读 threshold：覆盖成 0.01 或 1.0，行为应完全一致。"""
+		results = []
+		for override in (0.01, 1.0):
+			with self.subTest(override=override):
+				self.setUp()
+				self.section["queueSpeech"] = True
+				self.setRegionsWithThreshold([("稳定", "commit", override)])
+				plugin = self.makePlugin([
+					{"code": 100, "data": [{"text": "逐字出现的第一句", "score": 0.9}]},
+				])
+				plugin.OcrScreen()
+				# 第二帧仍是同一句（commit 需要“文本不变”才释放）
+				self.pending.append({"code": 100, "data": [{"text": "逐字出现的第一句", "score": 0.9}]})
+				self.tick(2.0)  # 超过 dedupHoldMs，commit 应念一次
+				plugin.OcrScreen()
+				results.append(self.texts())
+		self.assertEqual(results[0], results[1])
+		self.assertIn("逐字出现的第一句", results[0])
 
 
 class MultiRegionSpeechTests(Harness):
@@ -986,11 +1191,17 @@ class ThreadedLoopTests(Harness):
 		self.assertEqual(len(calls), 1)
 		self.assertFalse(self.plugin.active)
 
-	def testSleepUsesConfiguredInterval(self):
+	def testWaitUsesConfiguredInterval(self):
+		"""轮询间隔用可被“停止”立刻唤醒的 Event.wait，而不是不可中断的 time.sleep。"""
 		self.plugin.active = True
 		plugin = self.makePlugin([])
-		slept = []
-		self.plugin.time = types.SimpleNamespace(sleep=lambda seconds: (slept.append(seconds), setattr(self.plugin, "active", False)))
+		waited = []
+
+		def wait(seconds):
+			waited.append(seconds)
+			self.plugin.active = False
+
+		plugin._stopEvent = types.SimpleNamespace(clear=lambda: None, set=lambda: None, wait=wait)
 
 		def ocrScreen():
 			return None
@@ -998,7 +1209,7 @@ class ThreadedLoopTests(Harness):
 		plugin.OcrScreen = ocrScreen
 		self.section["interval"] = 2.5
 		plugin.ocrLoop()
-		self.assertEqual(slept, [2.5])
+		self.assertEqual(waited, [2.5])
 
 
 class ServiceProbeTests(Harness):

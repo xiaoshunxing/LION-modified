@@ -60,7 +60,7 @@ Initial release
 
 --------
 
-# Changes in this fork (LION modified 3.3.7)
+# Changes in this fork (LION modified 3.3.8)
 
 The backend uses an external PaddleOCR HTTP service instead of LION's bundled engine. The add-on supports several OCR
 areas, per-area de-duplication, queued speech and a service test — the controls useful for screen-reader users.
@@ -161,6 +161,12 @@ A strategy is chosen under Settings → LION modified → select an area → Edi
 stable** at 1500 ms is recommended; for very long dialogue use **Read as it grows**. De-duplication decides **what** is
 spoken; queued speech decides **in which order**.
 
+**Per-area classic threshold**: only Classic uses the similarity threshold, and each area has its own value by
+default ("Use global similarity threshold" checked, i.e. the panel's default). Uncheck it to set a value from 0 to
+100 for that area only. The text is spoken when similarity is **below** the threshold, so a lower value is
+stricter and a higher value speaks more often; a digit/template change (for example "Round 1" → "Round 2") is very
+similar, so raise that area's threshold if you want to hear it. The other strategies ignore the threshold.
+
 ### Behaviour details
 
 - **The box clears, then the same line appears again** (repeated shop dialogue): the line is spoken again by design.
@@ -182,6 +188,29 @@ spoken; queued speech decides **in which order**.
 With queued speech on, pressing `NVDA+Alt+N` to stop does not clear texts that are already queued; they finish playing.
 Disabling the add-on or quitting NVDA clears the queue.
 
+## Merge region capture (optional)
+
+The settings include a check box: **Merge region capture** (off by default).
+
+| | Off (default) | On |
+|---|---|---|
+| Captures | Each checked area is captured separately (N areas = N captures) | The union of all areas is captured once and then cropped per area (1 capture) |
+| Best for | Areas far apart on a large screen | Areas close together or overlapping (for example a subtitle strip directly above a dialogue box) |
+| Cost | The number of captures grows with the number of areas | The union can be much larger than a single area; the farther apart the areas, the slower the single capture |
+
+Recommendation: leave it off; turn it on when you have two or three areas that sit **close together** and capture time seems to be the bottleneck, then compare the actual latency before deciding.
+Even with it on, a failed union capture or crop falls back to per-area captures automatically, so no information is lost.
+
+## Configuration profiles
+
+- **NVDA 2026.3 or later**: this add-on's settings are **always stored in the base configuration** and do not follow
+  configuration profiles or triggers. Switching a profile does not change speech behaviour, and saving settings
+  writes only to the base `nvda.ini`.
+- After the first install/upgrade, **restart NVDA** to switch to this global mode. Values this add-on previously
+  saved into a profile are ignored; save the settings again if needed.
+- **NVDA 2026.1/2026.2**: the API does not exist, so the add-on still follows the active profile; edit settings
+  under the base configuration (with no profile active).
+
 ## Settings
 
 ### External service
@@ -192,11 +221,14 @@ Disabling the add-on or quitting NVDA clears the queue.
 4. **Minimum recognition score (%)** — default 0; raising it discards low-confidence text.
 5. **Detection longest side (0 = default)** — 0 uses the server configuration; sending 1280 has not proved faster.
 6. **Announce errors once** — on by default; a failure is announced once and then only logged.
+7. **Merge region capture** — off by default. When on, all checked areas are captured in one screenshot and cropped locally, which reduces the number of captures; areas far apart can make it slower, see the section above.
 
 ### Recognition settings
 
 1. **OCR interval (ms)** — 100 ms to 10 s. With several areas the times add up; a cycle that overruns starts the next immediately, and cycles never overlap.
-2. **Text similarity threshold (%)** — default 50; controls when text counts as changed. Each area is compared independently.
+2. **Default text similarity threshold (%)** — default 50; the default for Classic. Each area can override it in
+   the editor (see "De-duplication"). Text is spoken when similarity is **below** the threshold, so a lower value
+   is stricter; it only affects Classic, not "Read once when stable", "Read as it grows" or "Off".
 3. **Regular expression filters (one per line)** — matches are removed from the result, for example to suppress a watermark. Lines are joined into one before filtering, so `^` and `$` do not match an individual line; use a plain keyword such as `Sponsored` or `[^\s]*keyword[^\s]*`; leftover whitespace is collapsed.
 
 ## Performance reference
@@ -228,14 +260,16 @@ Area size dominates the cost; with several areas the total is roughly the sum of
 | Unauthorized (HTTP 401) | The token is wrong or malformed; copy it again with no leading or trailing whitespace |
 | HTTP 400 from the service | The endpoint does not support a capability in the request; the log has the server hint and supportedFlags |
 | Request timed out | The service is busy or the image is too large; raise the timeout, crop the area, or use JPEG |
-| Nothing is spoken | Verify that at least one area is **checked**, review the threshold, and confirm that the crop keeps the subtitles |
+| Nothing is spoken | Verify that at least one area is **checked**; check that the "Default text similarity threshold" is not **too low** (lower is stricter; 0 speaks almost nothing); confirm that the crop keeps the subtitles |
+| One area is never spoken | Check the area's de-duplication strategy: under Classic, a change too similar to the last spoken text is skipped (digit/template changes are common — raise that area's threshold); "Read once when stable"/"Read as it grows" wait for stable text or punctuation; with queued speech off only the last changed area is spoken per cycle. For details, set the NVDA log level to debug; the add-on logs the effective threshold and the decision per area |
+| Settings do not follow configuration profiles | Expected from 3.3.8 on NVDA 2026.3+: the add-on stores settings in the base configuration; older versions still follow profiles |
 | Only one area is read | With queued speech off, each cycle speaks only the last changed area; turn queued speech on |
 | Gesture does nothing | Almost always the gesture conflict described above |
 | The add-on asks for the screen curtain to be disabled | NVDA limitation: turn off the screen curtain before using OCR |
 
 ## Version
 
-Current version 3.3.7; full changes are in [CHANGELOG.md](https://github.com/xiaoshunxing/LION-modified/blob/main/CHANGELOG.md).
+Current version 3.3.8; full changes are in [CHANGELOG.md](https://github.com/xiaoshunxing/LION-modified/blob/main/CHANGELOG.md).
 
 ## Licence and credits
 
@@ -244,6 +278,4 @@ Current version 3.3.7; full changes are in [CHANGELOG.md](https://github.com/xia
 - Licence: GNU GPL v2 or later, the same as the original.
 - Feature design and interface come from the original authors; the changes in this fork are the recognition backend, the area model, de-duplication and speech scheduling.
 
-AI disclosure: This text was created with AI participation.
-
-Model version: DeepSeek-V4.1-Flash.
+[![powered by dsh](../dsh-badge.png)](https://github.com/deepseek-ai/deepseek-harness)

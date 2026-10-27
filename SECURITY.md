@@ -2,7 +2,7 @@
 
 ## 支持范围
 
-当前支持 **3.3.x** 公开版本；当前版本为 **3.3.7**。
+当前支持 **3.3.x** 公开版本；当前版本为 **3.3.8**。
 
 ## 报告安全问题
 
@@ -22,8 +22,4 @@
 - 如果服务监听局域网地址，请用防火墙和令牌保护，并评估网络暴露面；
 - 如果怀疑令牌泄漏，请在服务端更换令牌，并更新 NVDA 设置。
 
-AI 创作声明：本文案由 AI 参与创作。
-
-代码声明：本修改版代码在原版 LION 基础上由 AI 参与编写。
-
-模型版本：DeepSeek-V4.1-Flash。
+[![](https://img.shields.io/badge/powered_by-dsh-4D6BFE?style=flat-square&logo=deepseek&logoColor=white)](https://github.com/deepseek-ai/deepseek-harness)

@@ -9,6 +9,6 @@ contact_links:
   - name: 安全报告
     url: https://github.com/xiaoshunxing/LION-modified/security/policy
     about: 请私下报告安全问题，不要开公开 issue
-  - name: AI 创作声明
-    url: https://github.com/xiaoshunxing/LION-modified/blob/main/AI-DISCLOSURE.md
-    about: AI 参与文案与代码创作；模型版本：DeepSeek-V4.1-Flash
+  - name: Powered by dsh
+    url: https://github.com/deepseek-ai/deepseek-harness
+    about: 本项目的文档与修改版代码由 DeepSeek Harness (dsh) 参与创作

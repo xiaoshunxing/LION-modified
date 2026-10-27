@@ -161,6 +161,79 @@ class DedupFieldTests(unittest.TestCase):
 		self.assertEqual(region["dedup"], "classic")
 
 
+class ClassicThresholdTests(unittest.TestCase):
+	"""每区域经典相似度阈值（3.3.8 新增）。"""
+
+	def testDefaultIsInherit(self):
+		self.assertIsNone(regions.DEFAULT_REGION["classicThreshold"])
+		self.assertIsNone(regions.normalizeRegion({"id": 1})["classicThreshold"])
+
+	def testOverrideKeptAndClamped(self):
+		self.assertEqual(regions.normalizeRegion({"classicThreshold": 0.85})["classicThreshold"], 0.85)
+		self.assertEqual(regions.normalizeRegion({"classicThreshold": 1.5})["classicThreshold"], 1.0)
+		self.assertEqual(regions.normalizeRegion({"classicThreshold": -0.2})["classicThreshold"], 0.0)
+		self.assertEqual(regions.normalizeRegion({"classicThreshold": "0.4"})["classicThreshold"], 0.4)
+
+	def testInvalidValuesInherit(self):
+		for bad in (None, True, False, "abc", {}, []):
+			with self.subTest(bad=bad):
+				self.assertIsNone(regions.normalizeRegion({"classicThreshold": bad})["classicThreshold"])
+
+	def testLegacyJsonWithoutFieldInherits(self):
+		legacy = '[{"id":1,"name":"字幕","enabled":true,"target":1,"cropUp":70,"cropDown":0,"cropLeft":0,"cropRight":0}]'
+		self.assertIsNone(regions.loadFromJson(legacy)[0]["classicThreshold"])
+
+	def testResolveUsesOverrideOrGlobal(self):
+		self.assertEqual(regions.resolveClassicThreshold({"classicThreshold": 0.9}, 0.3), 0.9)
+		self.assertEqual(regions.resolveClassicThreshold({"classicThreshold": None}, 0.3), 0.3)
+		self.assertEqual(regions.resolveClassicThreshold({}, 0.3), 0.3)
+		# 全局值非法时退回 confspec 默认 0.5
+		self.assertEqual(regions.resolveClassicThreshold({}, "bad"), 0.5)
+
+	def testRoundTripKeepsThreshold(self):
+		original = [{"id": 1, "name": "对话", "classicThreshold": 0.75}]
+		loaded = regions.loadFromJson(regions.toJson(original))
+		self.assertEqual(loaded[0]["classicThreshold"], 0.75)
+
+
+class UnionRectTests(unittest.TestCase):
+	"""`unionRect`：合并截图用的最小外接矩形。"""
+
+	def testEmptyInputReturnsNone(self):
+		self.assertIsNone(regions.unionRect([]))
+		self.assertIsNone(regions.unionRect(None))
+
+	def testSingleRectIsReturnedAsIs(self):
+		rect = {"left": 100, "top": 200, "width": 300, "height": 400}
+		self.assertEqual(regions.unionRect([rect]), rect)
+
+	def testDisjointRectsProduceBoundingBox(self):
+		union = regions.unionRect([
+			{"left": 100, "top": 50, "width": 200, "height": 100},
+			{"left": 600, "top": 400, "width": 300, "height": 200},
+		])
+		self.assertEqual(
+			(union["left"], union["top"], union["width"], union["height"]),
+			(100, 50, 800, 550),
+		)
+
+	def testOverlappingRectsProduceBoundingBox(self):
+		union = regions.unionRect([
+			{"left": 0, "top": 0, "width": 100, "height": 100},
+			{"left": 50, "top": 50, "width": 100, "height": 100},
+		])
+		self.assertEqual((union["width"], union["height"]), (150, 150))
+
+	def testInvalidRectsAreSkipped(self):
+		union = regions.unionRect([
+			{"left": 10, "top": 10, "width": 0, "height": 50},
+			{"left": 20, "top": 20, "width": 30, "height": 40},
+			{"width": 10},
+			None,
+		])
+		self.assertEqual(union, {"left": 20, "top": 20, "width": 30, "height": 40})
+
+
 class ClippedRectTests(unittest.TestCase):
 	def testNoCropReturnsBase(self):
 		rect = regions.clippedRect(baseRect(), regions.normalizeRegion({}), screen=(1920, 1080))

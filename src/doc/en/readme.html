@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" type="text/css" href="../style.css" media="screen">
-<title>LION modified 3.3.7</title>
+<title>LION modified 3.3.8</title>
 </head>
 <body>
 <h1>What can this add-on do?</h1>
@@ -69,7 +69,7 @@
 <h2>Version 1.0</h2>
 <p>Initial release</p>
 <p>--------</p>
-<h1>Changes in this fork (LION modified 3.3.7)</h1>
+<h1>Changes in this fork (LION modified 3.3.8)</h1>
 <p>The backend uses an external PaddleOCR HTTP service instead of LION's bundled engine. The add-on supports several OCR areas, per-area de-duplication, queued speech and a service test — the controls useful for screen-reader users.</p>
 <h2>Relationship to the original LION</h2>
 <table>
@@ -199,6 +199,7 @@
 </tbody>
 </table>
 <p>A strategy is chosen under Settings → LION modified → select an area → Edit…; <strong>Stable after (ms)</strong> defaults to 1500 (range 500–10000). Lower it for fast typing, raise it for slow typing or jittery OCR. For games, <strong>Read once when stable</strong> at 1500 ms is recommended; for very long dialogue use <strong>Read as it grows</strong>. De-duplication decides <strong>what</strong> is spoken; queued speech decides <strong>in which order</strong>.</p>
+<p><strong>Per-area classic threshold</strong>: only Classic uses the similarity threshold, and each area has its own value by default ("Use global similarity threshold" checked, i.e. the panel's default). Uncheck it to set a value from 0 to 100 for that area only. The text is spoken when similarity is <strong>below</strong> the threshold, so a lower value is stricter and a higher value speaks more often; a digit/template change (for example "Round 1" → "Round 2") is very similar, so raise that area's threshold if you want to hear it. The other strategies ignore the threshold.</p>
 <h3>Behaviour details</h3>
 <ul>
 <li><strong>The box clears, then the same line appears again</strong> (repeated shop dialogue): the line is spoken again by design.</li>
@@ -232,6 +233,48 @@
 </tbody>
 </table>
 <p>With queued speech on, pressing <code>NVDA+Alt+N</code> to stop does not clear texts that are already queued; they finish playing. Disabling the add-on or quitting NVDA clears the queue.</p>
+<h2>Merge region capture (optional)</h2>
+<p>The settings include a check box: <strong>Merge region capture</strong> (off by default).</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Off (default)</th>
+<th>On</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Captures</td>
+<td>Each checked area is captured separately (N areas = N captures)</td>
+<td>The union of all areas is captured once and then cropped per area (1 capture)</td>
+</tr>
+<tr>
+<td>Best for</td>
+<td>Areas far apart on a large screen</td>
+<td>Areas close together or overlapping (for example a subtitle strip directly above a dialogue box)</td>
+</tr>
+<tr>
+<td>Cost</td>
+<td>The number of captures grows with the number of areas</td>
+<td>The union can be much larger than a single area; the farther apart the areas, the slower the single capture</td>
+</tr>
+</tbody>
+</table>
+<p>Recommendation: leave it off; turn it on when you have two or three areas that sit <strong>close together</strong> and capture time seems to be the bottleneck, then compare the actual latency before deciding. Even with it on, a failed union capture or crop falls back to per-area captures automatically, so no information is lost.</p>
+<h2>Configuration profiles</h2>
+<ul>
+<li><strong>NVDA 2026.3 or later</strong>: this add-on's settings are <strong>always stored in the base configuration</strong> and do not follow</li>
+</ul>
+<p>configuration profiles or triggers. Switching a profile does not change speech behaviour, and saving settings writes only to the base <code>nvda.ini</code>.</p>
+<ul>
+<li>After the first install/upgrade, <strong>restart NVDA</strong> to switch to this global mode. Values this add-on previously</li>
+</ul>
+<p>saved into a profile are ignored; save the settings again if needed.</p>
+<ul>
+<li><strong>NVDA 2026.1/2026.2</strong>: the API does not exist, so the add-on still follows the active profile; edit settings</li>
+</ul>
+<p>under the base configuration (with no profile active).</p>
 <h2>Settings</h2>
 <h3>External service</h3>
 <ol>
@@ -241,11 +284,15 @@
 <li><strong>Minimum recognition score (%)</strong> — default 0; raising it discards low-confidence text.</li>
 <li><strong>Detection longest side (0 = default)</strong> — 0 uses the server configuration; sending 1280 has not proved faster.</li>
 <li><strong>Announce errors once</strong> — on by default; a failure is announced once and then only logged.</li>
+<li><strong>Merge region capture</strong> — off by default. When on, all checked areas are captured in one screenshot and cropped locally, which reduces the number of captures; areas far apart can make it slower, see the section above.</li>
 </ol>
 <h3>Recognition settings</h3>
 <ol>
 <li><strong>OCR interval (ms)</strong> — 100 ms to 10 s. With several areas the times add up; a cycle that overruns starts the next immediately, and cycles never overlap.</li>
-<li><strong>Text similarity threshold (%)</strong> — default 50; controls when text counts as changed. Each area is compared independently.</li>
+<li><strong>Default text similarity threshold (%)</strong> — default 50; the default for Classic. Each area can override it in</li>
+</ol>
+<p>the editor (see "De-duplication"). Text is spoken when similarity is <strong>below</strong> the threshold, so a lower value is stricter; it only affects Classic, not "Read once when stable", "Read as it grows" or "Off".</p>
+<ol>
 <li><strong>Regular expression filters (one per line)</strong> — matches are removed from the result, for example to suppress a watermark. Lines are joined into one before filtering, so <code>^</code> and <code>$</code> do not match an individual line; use a plain keyword such as <code>Sponsored</code> or <code>[^\s]*keyword[^\s]*</code>; leftover whitespace is collapsed.</li>
 </ol>
 <h2>Performance reference</h2>
@@ -321,7 +368,15 @@
 </tr>
 <tr>
 <td>Nothing is spoken</td>
-<td>Verify that at least one area is <strong>checked</strong>, review the threshold, and confirm that the crop keeps the subtitles</td>
+<td>Verify that at least one area is <strong>checked</strong>; check that the "Default text similarity threshold" is not <strong>too low</strong> (lower is stricter; 0 speaks almost nothing); confirm that the crop keeps the subtitles</td>
+</tr>
+<tr>
+<td>One area is never spoken</td>
+<td>Check the area's de-duplication strategy: under Classic, a change too similar to the last spoken text is skipped (digit/template changes are common — raise that area's threshold); "Read once when stable"/"Read as it grows" wait for stable text or punctuation; with queued speech off only the last changed area is spoken per cycle. For details, set the NVDA log level to debug; the add-on logs the effective threshold and the decision per area</td>
+</tr>
+<tr>
+<td>Settings do not follow configuration profiles</td>
+<td>Expected from 3.3.8 on NVDA 2026.3+: the add-on stores settings in the base configuration; older versions still follow profiles</td>
 </tr>
 <tr>
 <td>Only one area is read</td>
@@ -338,7 +393,7 @@
 </tbody>
 </table>
 <h2>Version</h2>
-<p>Current version 3.3.7; full changes are in <a href="https://github.com/xiaoshunxing/LION-modified/blob/main/CHANGELOG.md">CHANGELOG.md</a>.</p>
+<p>Current version 3.3.8; full changes are in <a href="https://github.com/xiaoshunxing/LION-modified/blob/main/CHANGELOG.md">CHANGELOG.md</a>.</p>
 <h2>Licence and credits</h2>
 <ul>
 <li>Original LION: Stefan Moisei, Cary-rowen, anmi2004, hwf1324 — https://github.com/anmi2004/LION</li>
@@ -346,7 +401,6 @@
 <li>Licence: GNU GPL v2 or later, the same as the original.</li>
 <li>Feature design and interface come from the original authors; the changes in this fork are the recognition backend, the area model, de-duplication and speech scheduling.</li>
 </ul>
-<p>AI disclosure: This text was created with AI participation.</p>
-<p>Model version: DeepSeek-V4.1-Flash.</p>
+<p><a href="https://github.com/deepseek-ai/deepseek-harness"><img src="../dsh-badge.png" alt="powered by dsh" width="121" height="20"></a></p>
 </body>
 </html>

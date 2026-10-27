@@ -1,17 +1,7 @@
-# AI 创作声明 / AI Disclosure
+# Powered by dsh / 由 dsh 参与创作
 
-AI 创作声明：本仓库文案由 AI 参与创作。
+本仓库的文档与修改版代码由 **DeepSeek Harness（dsh）** 参与创作；上游 LION 原文、GPL/BSD 许可证原文除外。
 
-代码声明：本修改版代码在原版 LION 基础上由 AI 参与编写。
+The documentation and modified code in this repository were created with participation by **DeepSeek Harness (dsh)**; upstream LION original text and the GPL/BSD license texts are excluded.
 
-模型版本：DeepSeek-V4.1-Flash。
-
-例外：上游 LION 原文、GPL/BSD 许可证原文。
-
-AI disclosure: The copy in this repository was created with AI participation.
-
-Code disclosure: The modified code is based on the original LION and was written with AI participation.
-
-Model version: DeepSeek-V4.1-Flash.
-
-Exceptions: upstream LION text; GPL/BSD licence texts.
+[![](https://img.shields.io/badge/powered_by-dsh-4D6BFE?style=flat-square&logo=deepseek&logoColor=white)](https://github.com/deepseek-ai/deepseek-harness)

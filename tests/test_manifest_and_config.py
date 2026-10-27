@@ -15,10 +15,12 @@ from __future__ import annotations
 
 import ast
 import configparser
+import importlib.util
 import io
 import os
 import re
 import sys
+import types
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -57,7 +59,7 @@ NVDA 自己的 `addonHandler.AddonManifest` 也是同样的写法。
 	"""
 	return ConfigObj(io.StringIO(text), list_values=False)
 
-#: 取自 NVDA 2026.2 的 addonHandler.AddonManifest.configspec
+#: 取自 NVDA 2026.3 的 addonHandler.AddonManifest.configspec
 MANIFEST_SPEC = """
 name = string()
 summary = string()
@@ -148,7 +150,7 @@ class ManifestTests(unittest.TestCase):
 
 	def testSummaryAndVersion(self):
 		self.assertEqual(unquote(self.manifest["summary"]), "LION 修改版")
-		self.assertEqual(self.manifest["version"], "3.3.7")
+		self.assertEqual(self.manifest["version"], "3.3.8")
 
 	def testDescriptionKeepsOriginalFirstAndForkBelow(self):
 		"""按用户要求：原版描述原文在上，修改版内容在下。"""
@@ -172,6 +174,7 @@ class ManifestTests(unittest.TestCase):
 			"原版变更日志必须排在修改版内容之前",
 		)
 		self.assertIn("使用正则过滤识别文本", changelog)
+		self.assertIn("版本 3.3.8", changelog)
 		self.assertIn("版本 3.3.7", changelog)
 		self.assertIn("版本 3.3.2", changelog)
 		self.assertIn("版本 3.3.1", changelog)
@@ -188,7 +191,8 @@ class ManifestTests(unittest.TestCase):
 		last = apiVersionString(self.manifest["lastTestedNVDAVersion"])
 		self.assertLessEqual(minimum, last, "minimumNVDAVersion 不能大于 lastTestedNVDAVersion")
 		self.assertEqual(minimum, (2026, 1, 0))
-		self.assertEqual(last, (2026, 2, 0))
+		# 3.3.8 起使用 NVDA 2026.3 的配置节 API，测试版本提升到最新正式版
+		self.assertEqual(last, (2026, 3, 0))
 
 	def testDocFileExists(self):
 		doc = unquote(self.manifest["docFileName"])
@@ -229,8 +233,9 @@ class ConfspecTests(unittest.TestCase):
 		self.assertIn("model", self.spec)
 		self.assertIn("interval", self.spec)
 		self.assertIn("regions", self.spec)
+		self.assertIn("mergeCapture", self.spec)
 		self.assertIn("queueSpeech", self.spec)
-		self.assertEqual(len(self.spec), 14)
+		self.assertEqual(len(self.spec), 15)
 
 	def testLegacySingleRegionKeysAreGone(self):
 		"""单区域时代的裁剪/目标键已被区域列表取代。"""
@@ -284,6 +289,7 @@ class ConfspecTests(unittest.TestCase):
 	def testInvalidTypeRejected(self):
 		for key, bad in (
 			("visualize", "maybe"),
+			("mergeCapture", "perhaps"),
 			("interval", "abc"),
 			("imageFormat", "1.5"),
 			("queueSpeech", "perhaps"),
@@ -408,8 +414,9 @@ class SourceHygieneTests(unittest.TestCase):
 	def testNoTopLevelTranslationInjection(self):
 		"""`_` 必须来自 addonHandler.initTranslation，不能手工塞进 builtins。
 
-		`dedup.py` 是刻意的例外：纯逻辑模块，不导入任何 NVDA 模块、也没有面向用户的
-		字符串，这样才能在普通 Python 下完整测试。
+		例外：
+		- `dedup.py`：纯逻辑模块，不导入任何 NVDA 模块、也没有面向用户的字符串；
+		- `installTasks.py`：安装任务，只做配置节登记，没有可翻译字符串，也不启动翻译。
 		"""
 		for path in self._pluginFiles():
 			name = os.path.basename(path)
@@ -419,6 +426,8 @@ class SourceHygieneTests(unittest.TestCase):
 				self.assertNotIn("builtins", source)
 				if name == "dedup.py":
 					self.assertNotIn("addonHandler", source)
+				elif name == "installTasks.py":
+					self.assertNotIn("initTranslation", source)
 				else:
 					self.assertIn("addonHandler.initTranslation()", source)
 
@@ -443,6 +452,9 @@ class SourceHygieneTests(unittest.TestCase):
 		self.assertIn('_("&Model / endpoint:")', source)
 		self.assertIn('_("&Test / get models")', source)
 		self.assertIn('_("&Queue speech")', source)
+		self.assertIn('_("Merge region &capture (one screenshot)")', source)
+		self.assertIn('_("&Default text similarity threshold (%):")', source)
+		self.assertIn('_("Use &global similarity threshold")', source)
 		self.assertIn('_("OCR regions:")', source)
 
 	def testRegionModuleIsPresentationFree(self):
@@ -470,6 +482,9 @@ class SourceHygieneTests(unittest.TestCase):
 			"PNG (larger, lossless)",
 			"OCR region",
 			"&Queue speech",
+			"Merge region &capture (one screenshot)",
+			"&Default text similarity threshold (%):",
+			"Use &global similarity threshold",
 			"OCR regions:",
 			"Area %d",
 			"Select a region first.",
@@ -490,6 +505,169 @@ class SourceHygieneTests(unittest.TestCase):
 		for block in re.split(r"\n\s*\n", po):
 			if "OCR &service URL:" in block:
 				self.assertNotIn(", fuzzy", block.splitlines()[0] if block.splitlines() else "")
+
+
+INSTALL_TASKS = os.path.join(SRC, "installTasks.py")
+ROOT = os.path.abspath(os.path.join(HERE, os.pardir))
+LITE_SRC = os.path.join(ROOT, "variants", "lite", "src")
+
+#: dsh-badge 技能的官方徽章（样式/配色/项目链接不得修改）
+BADGE = (
+	"[![](https://img.shields.io/badge/powered_by-dsh-4D6BFE?style=flat-square"
+	"&logo=deepseek&logoColor=white)](https://github.com/deepseek-ai/deepseek-harness)"
+)
+#: 插件手册要在 NVDA 离线帮助里也能显示：用随包分发的官方 PNG 副本
+LOCAL_BADGE = "[![powered by dsh](../dsh-badge.png)](https://github.com/deepseek-ai/deepseek-harness)"
+PLAIN_ATTRIBUTION = "Powered by dsh — https://github.com/deepseek-ai/deepseek-harness"
+LEGACY_DECLARATION = re.compile(
+	r"AI 创作声明|代码声明|模型版本|AI disclosure:|Code disclosure:|Model version:"
+)
+
+
+def confspecOf(pluginInit: str) -> dict:
+	"""从插件 `__init__.py` 的 AST 里读取 confspec（不执行模块）。"""
+	source = open(pluginInit, encoding="utf-8").read()
+	for node in ast.walk(ast.parse(source)):
+		if isinstance(node, ast.Assign) and any(
+			getattr(target, "id", None) == "confspec" for target in node.targets
+		):
+			return ast.literal_eval(node.value)
+	raise AssertionError(f"在 {pluginInit} 里找不到 confspec")
+
+
+class BadgeAttributionTests(unittest.TestCase):
+	"""dsh 徽章替代 AI 声明：应署名的文档末尾有官方徽章，旧声明字面量不再出现。"""
+
+	BADGED_DOCS = (
+		"README.md",
+		"CHANGELOG.md",
+		"NOTICE.md",
+		"CONTRIBUTING.md",
+		"SECURITY.md",
+		"AI-DISCLOSURE.md",
+		"docs/发布流程.md",
+		"docs/开发文档-中文.md",
+		"docs/DevGuide-EN.md",
+		"docs/release-notes/v3.3.7.md",
+		"docs/release-notes/v3.3.8.md",
+	)
+	#: 插件手册用随包分发的官方 PNG（NVDA 帮助离线可显示）
+	LOCAL_BADGED_DOCS = (
+		"src/doc/zh_CN/readme.md",
+		"src/doc/en/readme.md",
+		"variants/lite/src/doc/zh_CN/readme.md",
+		"variants/lite/src/doc/en/readme.md",
+	)
+
+	def read(self, relative: str) -> str:
+		with open(os.path.join(ROOT, relative), encoding="utf-8") as handle:
+			return handle.read()
+
+	def testEveryDocumentEndsWithBadge(self):
+		for relative in self.BADGED_DOCS:
+			with self.subTest(path=relative):
+				text = self.read(relative).rstrip()
+				self.assertTrue(text.endswith(BADGE), f"{relative} 末尾不是 dsh 官方徽章")
+
+	def testEveryManualEndsWithLocalBadge(self):
+		for relative in self.LOCAL_BADGED_DOCS:
+			with self.subTest(path=relative):
+				text = self.read(relative).rstrip()
+				self.assertTrue(text.endswith(LOCAL_BADGE), f"{relative} 末尾不是本地 dsh 徽章")
+
+	def testNoLegacyAiDeclarationsInDocs(self):
+		for relative in self.BADGED_DOCS + self.LOCAL_BADGED_DOCS:
+			with self.subTest(path=relative):
+				self.assertIsNone(
+					LEGACY_DECLARATION.search(self.read(relative)),
+					f"{relative} 仍有旧 AI 声明字面量",
+				)
+
+	def testManifestUsesPlainTextAttribution(self):
+		"""manifest 无法渲染图片：用与徽章等价的纯文本行。"""
+		with open(MANIFEST, encoding="utf-8") as handle:
+			manifest = handle.read()
+		self.assertIn(PLAIN_ATTRIBUTION, manifest)
+		self.assertIsNone(LEGACY_DECLARATION.search(manifest), "manifest 仍有旧 AI 声明")
+
+	def testLiteManifestUsesPlainTextAttribution(self):
+		path = os.path.join(LITE_SRC, "manifest.ini")
+		with open(path, encoding="utf-8") as handle:
+			manifest = handle.read()
+		self.assertIn(PLAIN_ATTRIBUTION, manifest)
+		self.assertIsNone(LEGACY_DECLARATION.search(manifest), "lite manifest 仍有旧 AI 声明")
+
+
+class InstallTasksTests(unittest.TestCase):
+	"""installTasks.py：安装时把配置节登记为 base-only（NVDA 2026.3+）。"""
+
+	def loadModule(self):
+		spec = importlib.util.spec_from_file_location("lion_install_tasks_under_test", INSTALL_TASKS)
+		module = importlib.util.module_from_spec(spec)
+		spec.loader.exec_module(module)
+		return module
+
+	def runOnInstall(self, fakeConfig):
+		"""把 sys.modules["config"] 换成桩后执行 onInstall（执行完恢复）。"""
+		saved = sys.modules.get("config")
+		sys.modules["config"] = fakeConfig
+		try:
+			module = self.loadModule()
+			module.onInstall()
+			return module
+		finally:
+			if saved is None:
+				sys.modules.pop("config", None)
+			else:
+				sys.modules["config"] = saved
+
+	def testSpecMatchesPluginConfspec(self):
+		module = self.loadModule()
+		self.assertEqual(module.SECTION, "LION-modified")
+		self.assertEqual(module.SPEC, confspecOf(os.path.join(PLUGIN, "__init__.py")))
+
+	def testModuleIsSelfContained(self):
+		"""installTasks 不能 import 插件模块，也不能注销配置节/定义 onUninstall。"""
+		source = open(INSTALL_TASKS, encoding="utf-8").read()
+		tree = ast.parse(source)
+		imported = set()
+		for node in ast.walk(tree):
+			if isinstance(node, ast.Import):
+				imported.update(alias.name.split(".")[0] for alias in node.names)
+			elif isinstance(node, ast.ImportFrom) and node.module:
+				imported.add(node.module.split(".")[0])
+		self.assertNotIn("globalPlugins", imported, "installTasks 不能 import 插件模块")
+		for node in ast.walk(tree):
+			if isinstance(node, ast.Attribute):
+				self.assertNotEqual(node.attr, "unregisterSection", "不能注销配置节")
+		defined = {
+			node.name for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+		}
+		self.assertNotIn("onUninstall", defined, "不要在卸载任务里删除注册")
+
+	def testNoConfigSectionsApiIsSilentlySkipped(self):
+		self.runOnInstall(types.ModuleType("config"))  # 不能抛异常
+
+	def testRegistersBaseOnlySection(self):
+		calls = []
+		fake = types.ModuleType("config")
+		fake.configSections = types.SimpleNamespace(
+			registerSection=lambda *args, **kwargs: calls.append((args, kwargs))
+		)
+		module = self.runOnInstall(fake)
+		self.assertEqual(
+			calls,
+			[(("LION-modified", module.SPEC), {"isBaseOnly": True})],
+		)
+
+	def testRegistrationFailureDoesNotBreakInstall(self):
+		fake = types.ModuleType("config")
+
+		def fail(*args, **kwargs):
+			raise RuntimeError("boom")
+
+		fake.configSections = types.SimpleNamespace(registerSection=fail)
+		self.runOnInstall(fake)  # 不能抛异常
 
 
 if __name__ == "__main__":

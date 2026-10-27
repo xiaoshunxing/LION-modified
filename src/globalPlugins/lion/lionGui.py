@@ -6,6 +6,8 @@
 # Copyright (C) 2025-2026 LION contributors
 # Copyright (C) 2026 xiaoshunxing — 外部服务接入、多选区识别、排队朗读
 
+import threading
+
 import addonHandler
 import config
 import gui
@@ -118,6 +120,48 @@ class RegionEditDialog(gui.settingsDialogs.SettingsDialog):
 			initial=int(self._region["dedupHoldMs"]),
 		)
 
+		# ------------------------------------------------ 经典相似度阈值（逐区域）
+		# 只有 classic 去重使用阈值；默认“跟随全局默认值”，旧配置与此一致。
+		valThreshold = config.conf.getConfigValidation((CONFIG_SECTION, "threshold"))
+		self._thresholdMin = int(float(valThreshold.kwargs["min"]) * 100)
+		self._thresholdMax = int(float(valThreshold.kwargs["max"]) * 100)
+		globalPercent = int(round(float(config.conf[CONFIG_SECTION].get("threshold", 0.5)) * 100))
+		override = self._region.get("classicThreshold")
+		initialPercent = globalPercent if override is None else int(round(float(override) * 100))
+		self.similarityInheritCheckBox = helper.addItem(
+			wx.CheckBox(self, label=_("Use &global similarity threshold")),
+		)
+		self.similarityInheritCheckBox.SetValue(override is None)
+		self.classicThresholdEdit = helper.addLabeledControl(
+			_("&Text similarity threshold (%):"),
+			nvdaControls.SelectOnFocusSpinCtrl,
+			min=self._thresholdMin,
+			max=self._thresholdMax,
+			initial=max(self._thresholdMin, min(self._thresholdMax, initialPercent)),
+		)
+		self.similarityInheritCheckBox.Bind(wx.EVT_CHECKBOX, self.onThresholdInheritChanged)
+		self.dedupList.Bind(wx.EVT_CHOICE, self.onDedupChanged)
+		self._updateThresholdControls()
+
+	def _isClassicDedup(self) -> bool:
+		index = self.dedupList.GetSelection()
+		return 0 <= index < len(regionModel.DEDUP_MODES) and regionModel.DEDUP_MODES[index] == "classic"
+
+	def _updateThresholdControls(self) -> None:
+		"""阈值只对经典去重生效：其它策略时灰显，但保留已填的值。"""
+		classic = self._isClassicDedup()
+		inherit = bool(self.similarityInheritCheckBox.GetValue())
+		self.similarityInheritCheckBox.Enable(classic)
+		self.classicThresholdEdit.Enable(classic and not inherit)
+
+	def onThresholdInheritChanged(self, evt: wx.CommandEvent):
+		self._updateThresholdControls()
+		evt.Skip()
+
+	def onDedupChanged(self, evt: wx.CommandEvent):
+		self._updateThresholdControls()
+		evt.Skip()
+
 	def onOk(self, evt: wx.CommandEvent):
 		# 先校验：左右/上下之和不能超过 100，否则矩形会退化
 		crops = {key: control.GetValue() for key, control in self.cropEdits.items()}
@@ -145,6 +189,9 @@ class RegionEditDialog(gui.settingsDialogs.SettingsDialog):
 			region[key] = control.GetValue()
 		region["dedup"] = regionModel.DEDUP_MODES[self.dedupList.GetSelection()]
 		region["dedupHoldMs"] = self.dedupHoldEdit.GetValue()
+		region["classicThreshold"] = None
+		if not self.similarityInheritCheckBox.GetValue():
+			region["classicThreshold"] = self.classicThresholdEdit.GetValue() / 100.0
 		return regionModel.normalizeRegion(region, self._index)
 
 
@@ -272,10 +319,17 @@ class LIONSettingsPanel(gui.settingsDialogs.SettingsPanel):
 		)
 		self.queueSpeechCheckBox.SetValue(bool(config.conf[CONFIG_SECTION]["queueSpeech"]))
 
+		# 合并区域截图（可选）：把所有启用区域一次抓下来再本地裁剪。
+		# 区域彼此离得远时并集很大、单次抓屏更慢，所以默认关闭。
+		self.mergeCaptureCheckBox = settingsSizerHelper.addItem(
+			wx.CheckBox(self, label=_("Merge region &capture (one screenshot)")),
+		)
+		self.mergeCaptureCheckBox.SetValue(bool(config.conf[CONFIG_SECTION]["mergeCapture"]))
+
 		# ------------------------------------------------ 识别参数
 		valThreshold = config.conf.getConfigValidation((CONFIG_SECTION, "threshold"))
 		self.similarityThresholdEdit = settingsSizerHelper.addLabeledControl(
-			_("&Text similarity threshold (%):"),
+			_("&Default text similarity threshold (%):"),
 			nvdaControls.SelectOnFocusSpinCtrl,
 			min=int(float(valThreshold.kwargs["min"]) * 100),
 			max=int(float(valThreshold.kwargs["max"]) * 100),
@@ -459,7 +513,7 @@ class LIONSettingsPanel(gui.settingsDialogs.SettingsPanel):
 			self.modelCombo.SetValue(choices[0])
 
 	def buildPanelClient(self, timeout: float) -> HttpOcrClient:
-		"""按界面上的当前值构造一个探测用客户端。"""
+		"""按界面上的当前值构造一个探测用客户端。**只能在界面线程调用。**"""
 		return HttpOcrClient(
 			self.serviceUrlEdit.GetValue().strip(),
 			model=self.modelTarget(self.currentModel()),
@@ -473,6 +527,9 @@ class LIONSettingsPanel(gui.settingsDialogs.SettingsPanel):
 		模型列表按"通行契约优先"探测（`/models`、`/v1/models`），都没有时回退到
 		`/openapi.json` 的端点枚举，并在结果里说明来源。PaddleOCR-VL 单次推理较慢，
 		对它跳过"发小图识别"这一步，避免误报超时。
+
+		**网络探测全部在后台线程执行**：每一步最多 2.5 秒，最坏约 10 秒；
+		放在主线程会让 NVDA 整个设置界面卡住。结果用 `wx.CallAfter` 回到界面线程。
 		"""
 		base = self.currentServiceBase()
 		model = self.modelTarget(self.currentModel())
@@ -485,43 +542,85 @@ class LIONSettingsPanel(gui.settingsDialogs.SettingsPanel):
 		if not client.base_url:
 			self.setTestResult(_("Invalid service address."), ok=False)
 			return
+		# 后台线程只使用这里捕获的普通值，绝不能再读取 wx 控件
+		request = {
+			"url": self.serviceUrlEdit.GetValue().strip(),
+			"model": model,
+			"token": self.serviceTokenEdit.GetValue().strip(),
+			"timeout": timeout,
+			"slowEndpoint": client.base_url.rstrip("/").endswith(SLOW_ENDPOINT_SUFFIX),
+		}
+		self.testButton.Enable(False)
 		self.setTestResult(_("Testing..."), ok=None)
+		threading.Thread(
+			target=self._probeInBackground,
+			args=(request,),
+			daemon=True,
+		).start()
+
+	@staticmethod
+	def _makeProbeClient(request: dict) -> HttpOcrClient:
+		"""按后台探测捕获到的参数构造客户端（不读取界面控件）。"""
+		return HttpOcrClient(
+			request["url"],
+			model=request["model"],
+			token=request["token"],
+			timeout=request["timeout"],
+		)
+
+	def _probeInBackground(self, request: dict):
+		"""后台线程：执行全部网络探测，完成后把结果交回界面线程。"""
 		parts = []
-		models, source, error = client.listModels(timeout=TEST_CONNECTION_TIMEOUT)
-		if models:
-			self.setModelChoices(models)
-			parts.append(_("Found %d models.") % len(models))
-			if source == "openapi":
-				parts.append(
-					_("Source: OpenAPI endpoints")
-				)
+		models = []
+		ok = False
+		try:
+			client = self._makeProbeClient(request)
+			models, source, error = client.listModels(timeout=TEST_CONNECTION_TIMEOUT)
+			if models:
+				parts.append(_("Found %d models.") % len(models))
+				if source == "openapi":
+					parts.append(_("Source: OpenAPI endpoints"))
+				else:
+					parts.append(_("Source: %s.") % source)
 			else:
-				parts.append(_("Source: %s.") % source)
-		else:
-			connected, detail = client.testConnection(timeout=TEST_CONNECTION_TIMEOUT)
-			if not connected:
-				self.setTestResult(detail, ok=False)
+				connected, detail = client.testConnection(timeout=TEST_CONNECTION_TIMEOUT)
+				if not connected:
+					# 失败详情来自 ocrClient（已翻译），直接展示
+					parts.append(detail)
+					wx.CallAfter(self._applyProbeResult, [], parts, False)
+					return
+				parts.append(
+					_("Connected; model list unavailable: %s") % (error or detail)
+				)
+			# 令牌校验：缺 file 的请求体不会触发推理，对 PaddleOCR-VL 也是毫秒级
+			tokenOk, tokenDetail = client.verifyToken(timeout=TEST_CONNECTION_TIMEOUT)
+			parts.append(tokenDetail)
+			if not tokenOk:
+				wx.CallAfter(self._applyProbeResult, models, parts, False)
 				return
-			parts.append(
-				_("Connected; model list unavailable: %s") % (error or detail)
-			)
-		# 令牌校验：缺 file 的请求体不会触发推理，对 PaddleOCR-VL 也是毫秒级
-		tokenOk, tokenDetail = client.verifyToken(timeout=TEST_CONNECTION_TIMEOUT)
-		parts.append(tokenDetail)
-		if not tokenOk:
-			self.setTestResult(_("; ").join(parts), ok=False)
-			return
-		# 识别测试：PaddleOCR-VL 较慢，跳过并说明
-		if client.base_url.rstrip("/").endswith(SLOW_ENDPOINT_SUFFIX):
-			parts.append(_("Recognition test skipped (PaddleOCR-VL is slow)."))
-		else:
-			probe = self.buildPanelClient(timeout)
-			ok, detail = probe.testConnection(sendRequest=True)
-			parts.append(detail)
-			if not ok:
-				self.setTestResult(_("; ").join(parts), ok=False)
-				return
-		self.setTestResult(_("; ").join(parts), ok=True)
+			# 识别测试：PaddleOCR-VL 较慢，跳过并说明
+			if request["slowEndpoint"]:
+				parts.append(_("Recognition test skipped (PaddleOCR-VL is slow)."))
+				ok = True
+			else:
+				probe = self._makeProbeClient(request)
+				ok, detail = probe.testConnection(sendRequest=True)
+				parts.append(detail)
+		except Exception as error:  # noqa: BLE001 - 后台线程不能把异常抛到线程外
+			parts.append(str(error))
+			ok = False
+		wx.CallAfter(self._applyProbeResult, models, parts, ok)
+
+	def _applyProbeResult(self, models, parts, ok):
+		"""界面线程：刷新模型候选并显示探测结果（允许对话框已关闭）。"""
+		try:
+			if models:
+				self.setModelChoices(models)
+			self.testButton.Enable(True)
+			self.setTestResult(_("; ").join(parts), ok=ok)
+		except RuntimeError:
+			# 用户在探测期间关闭了设置对话框：忽略迟到的结果即可
+			pass
 
 	def setTestResult(self, text: str, ok):
 		"""把结果同时写到面板与语音输出，方便屏幕阅读器用户。"""
@@ -557,6 +656,7 @@ class LIONSettingsPanel(gui.settingsDialogs.SettingsPanel):
 		conf["detLimitSideLen"] = int(self.detLimitEdit.GetValue())
 		conf["notifyOnError"] = bool(self.notifyOnErrorCheckBox.GetValue())
 		conf["regions"] = regionModel.toJson(self.getRegions())
+		conf["mergeCapture"] = bool(self.mergeCaptureCheckBox.GetValue())
 		conf["queueSpeech"] = bool(self.queueSpeechCheckBox.GetValue())
 		conf["interval"] = float(self.intervalEdit.GetValue() / 1000)
 		conf["threshold"] = float(self.similarityThresholdEdit.GetValue() / 100)

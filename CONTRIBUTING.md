@@ -6,7 +6,7 @@
 
 - Windows + PowerShell 7（`pwsh`）；
 - Python 3.12 或更高；
-- NVDA 2026.2（做安装/面板冒烟测试时需要）；
+- NVDA 2026.3（做安装/面板冒烟测试时需要；插件最低支持 2026.1）；
 - 推荐在本机部署 PaddleOCR HTTP 服务；在线测试示例地址 `http://127.0.0.1:23353`，请按实际部署修改。
 
 ## 测试
@@ -19,7 +19,9 @@ python -m unittest discover -s tests -p 'test_*.py'
 
 - 完全离线：`$env:LION_SKIP_SERVICE_PROBE = '1'`、`$env:LION_TEST_LIVE = '0'`；
 - 在线测试令牌：`LION_TEST_TOKEN` 或 `LION_TEST_TOKEN_FILE`；
-- 令牌、个人路径、`tests/artifacts/` 和 `dist/` 不要提交。
+- 令牌、个人路径、`tests/artifacts/` 和 `dist/` 不要提交；
+- **包级用例需要先打包**（`dist/` 里有产物时才运行）：先执行下面的“打包”，再跑一次全量测试，
+  版本号、条目清单、体积预算和“产物与 `src/` 一致”的断言才会生效。
 
 ## 打包
 
@@ -29,6 +31,8 @@ pwsh -File scripts\build_addon.ps1 -Variant lite -Python python
 ```
 
 也可以用 `$env:LION_PYTHON` 指定解释器。产物写入 `dist/`，不进入 git。
+如果系统执行策略阻止运行未签名脚本，改用 `pwsh -ExecutionPolicy Bypass -File scripts\build_addon.ps1 ...`。
+打包会重新生成 `src/doc/*/readme.html` 并创建 `build/lite/`（lite 的 staging 目录），属于正常行为。
 
 ## 代码风格
 
@@ -47,7 +51,7 @@ pwsh -File scripts\build_addon.ps1 -Variant lite -Python python
 ## 版本号
 
 - 主版本沿用上游 **3.3**；
-- 修改版用 **3.3.N** 递增，当前 **3.3.7**；
+- 修改版用 **3.3.N** 递增，当前 **3.3.8**；
 - 版本变更要同步 `manifest.ini`、locale manifest、readme、docs 与 `test_package.EXPECTED_VERSION`。
 
 发布步骤见 [docs/发布流程.md](docs/发布流程.md)。
@@ -64,8 +68,4 @@ pwsh -File scripts\build_addon.ps1 -Variant lite -Python python
 
 请不要在公开 issue 里贴令牌或敏感日志，按 [SECURITY.md](SECURITY.md) 私下报告。
 
-AI 创作声明：本文案由 AI 参与创作。
-
-代码声明：本修改版代码在原版 LION 基础上由 AI 参与编写。
-
-模型版本：DeepSeek-V4.1-Flash。
+[![](https://img.shields.io/badge/powered_by-dsh-4D6BFE?style=flat-square&logo=deepseek&logoColor=white)](https://github.com/deepseek-ai/deepseek-harness)

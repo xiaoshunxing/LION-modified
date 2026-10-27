@@ -6,10 +6,12 @@
 
 """多选区识别用的区域模型。
 
-本模块**刻意不导入任何 NVDA 模块**，只做数据与几何计算：
+本模块只依赖标准库，外加 `addonHandler` 的 `_()` 翻译；**不导入任何 NVDA 的
+UI/配置模块**，只做数据与几何计算：
 
 * 区域的容错解析、归一化与 JSON 序列化；
 * 由"基底矩形"换算实际识别矩形（四向百分比裁剪，算法与原版 `cropRectLTWH` 一致）；
+* 多个区域矩形的并集（供"合并区域截图"一次抓屏）；
 * 旧版单区域配置（`target` + 四个裁剪键）到新模型的迁移。
 
 基底矩形的解析（导航对象 / 全屏 / 当前窗口 / 当前控件）由调用方通过 `resolveBase`
@@ -62,6 +64,8 @@ DEFAULT_REGION = {
 	"cropRight": 0,
 	"dedup": "classic",
 	"dedupHoldMs": 1500,
+	#: 经典相似度阈值覆盖；None = 跟随全局默认值（旧配置/新区域的默认行为）
+	"classicThreshold": None,
 }
 
 #: 去重策略名（与 dedup.MODES 一致；这里单独列出以免 regions 依赖 dedup）
@@ -109,6 +113,33 @@ def clampHold(value, default: int = DEDUP_HOLD_DEFAULT) -> int:
 	return max(DEDUP_HOLD_MIN, min(DEDUP_HOLD_MAX, number))
 
 
+def clampOptionalThreshold(value):
+	"""把区域可选的经典相似度阈值规整成 0.0–1.0；None/非法/布尔 → None（跟随全局）。"""
+	if value is None or isinstance(value, bool):
+		return None
+	try:
+		number = float(value)
+	except (TypeError, ValueError):
+		return None
+	return max(0.0, min(1.0, number))
+
+
+def resolveClassicThreshold(region, globalThreshold: float = 0.5) -> float:
+	"""解析区域实际使用的经典相似度阈值。
+
+	区域设置（0.0–1.0）优先；`None` 或非法值时跟随全局默认值；
+	全局值也非法时退回 0.5（与 confspec 默认一致）。
+	"""
+	if isinstance(region, dict):
+		override = clampOptionalThreshold(region.get("classicThreshold"))
+		if override is not None:
+			return override
+	try:
+		return max(0.0, min(1.0, float(globalThreshold)))
+	except (TypeError, ValueError):
+		return 0.5
+
+
 def normalizeRegion(raw, index: int = 0) -> dict:
 	"""把一个可能不完整的区域字典规整成合法区域。
 
@@ -139,6 +170,8 @@ def normalizeRegion(raw, index: int = 0) -> dict:
 		region["cropDown"] = max(0, 100 - region["cropUp"])
 	region["dedup"] = clampDedup(raw.get("dedup", "classic"))
 	region["dedupHoldMs"] = clampHold(raw.get("dedupHoldMs", DEDUP_HOLD_DEFAULT))
+	# 旧配置没有这个键：保持 None（跟随全局），行为与 3.3.7 完全一致
+	region["classicThreshold"] = clampOptionalThreshold(raw.get("classicThreshold"))
 	return region
 
 
@@ -207,6 +240,34 @@ def clippedRect(base, crop, minSide: int = MIN_SIDE, screen=None) -> dict:
 		"width": max(minSide, min(width, resX - left)),
 		"height": max(minSide, min(height, resY - top)),
 	}
+
+
+def unionRect(rects) -> dict | None:
+	"""算出多个矩形的并集（最小外接矩形）；没有有效矩形时返回 None。
+
+	"合并区域截图"用它把所有启用区域一次抓下来，再在本地按区域裁剪，
+	从而把 N 次抓屏降成 1 次。注意：区域彼此相隔很远时并集面积会远大于
+	各区域面积之和，单次全屏抓屏反而更慢，所以这个功能是可选项、默认关闭。
+	"""
+	boxes = []
+	for rect in rects or []:
+		try:
+			width = int(rect["width"])
+			height = int(rect["height"])
+			left = int(rect["left"])
+			top = int(rect["top"])
+		except (KeyError, TypeError, ValueError):
+			continue
+		if width <= 0 or height <= 0:
+			continue
+		boxes.append((left, top, left + width, top + height))
+	if not boxes:
+		return None
+	left = min(box[0] for box in boxes)
+	top = min(box[1] for box in boxes)
+	right = max(box[2] for box in boxes)
+	bottom = max(box[3] for box in boxes)
+	return {"left": left, "top": top, "width": right - left, "height": bottom - top}
 
 
 def regionRect(region: dict, resolveBase, screen=None) -> dict:

@@ -5,7 +5,7 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: 'LION-modified' '3.3.7'\n"
+"Project-Id-Version: 'LION-modified' '3.3.8'\n"
 "Report-Msgid-Bugs-To: 'nvda-translations@groups.io'\n"
 "POT-Creation-Date: 2026-10-18 02:00+0800\n"
 "PO-Revision-Date: 2026-10-18 02:00+0800\n"
@@ -108,6 +108,10 @@ msgstr "下移(&d)"
 #: globalPlugins/lion/lionGui.py
 msgid "&Queue speech"
 msgstr "排队朗读(&Q)"
+
+#: globalPlugins/lion/lionGui.py
+msgid "Merge region &capture (one screenshot)"
+msgstr "合并区域截图(&M)（只截一次）"
 
 #: globalPlugins/lion/lionGui.py
 msgid "Select a region first."
@@ -230,6 +234,14 @@ msgstr "识别目标:"
 #: globalPlugins/lion/lionGui.py
 msgid "&Text similarity threshold (%):"
 msgstr "文本相似度阈值(%):"
+
+#: globalPlugins/lion/lionGui.py
+msgid "&Default text similarity threshold (%):"
+msgstr "默认文本相似度阈值(%):"
+
+#: globalPlugins/lion/lionGui.py
+msgid "Use &global similarity threshold"
+msgstr "使用全局相似度阈值(&G)"
 
 #: globalPlugins/lion/lionGui.py
 msgid "Crop pixels from &above (%):"

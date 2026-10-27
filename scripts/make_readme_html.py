@@ -4,7 +4,7 @@
 
 不引入第三方 markdown 库；NVDA 自带的 `l10nUtil md2html` 只认它自己的文档类型，
 所以这里只实现我们文档实际用到的构件：标题、表格、有序/无序列表、段落、
-行内粗体/代码/链接/转义竖线。
+行内粗体/代码/链接/图片（含“图片套链接”的徽章写法）、转义竖线。
 
 用法::
 
@@ -24,7 +24,14 @@ DEFAULT_SRC = os.path.abspath(os.path.join(HERE, os.pardir, "src"))
 LANGS = {"zh_CN": "zh-CN", "en": "en"}
 TITLE = "LION modified"
 
+#: 按顺序应用：先“图片套链接”的徽章写法，再单图片，最后普通链接。
+#: 图片统一按 dsh 徽章的 121×20 展示尺寸输出（不重绘、不改变宽高比）。
 _INLINE = (
+	(
+		re.compile(r"\[!\[([^\]]*)\]\(([^)]+)\)\]\(([^)]+)\)"),
+		r'<a href="\3"><img src="\2" alt="\1" width="121" height="20"></a>',
+	),
+	(re.compile(r"!\[([^\]]*)\]\(([^)]+)\)"), r'<img src="\2" alt="\1" width="121" height="20">'),
 	(re.compile(r"\[([^\]]+)\]\(([^)]+)\)"), r'<a href="\2">\1</a>'),
 	(re.compile(r"\*\*([^*]+)\*\*"), r"<strong>\1</strong>"),
 	(re.compile(r"`([^`]+)`"), r"<code>\1</code>"),

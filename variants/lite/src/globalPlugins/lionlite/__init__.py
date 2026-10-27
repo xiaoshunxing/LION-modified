@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # LION 修改版 lite（LION modified lite）— NVDA global plugin
 # 本文件基于 LION（作者 Stefan Moisei / Cary-rowen / anmi2004 / hwf1324）修改，
-# 以"单区域、原版式界面"的简洁版为基线，客户端对齐完整版 3.3.7。
+# 以"单区域、原版式界面"的简洁版为基线，客户端对齐完整版 3.3.8。
 # 遵循 GNU GPL v2 或更高版本发布（见 COPYING.txt）。
 #
 # Copyright (C) 2025-2026 LION contributors
@@ -20,6 +20,7 @@ import gui
 import locationHelper
 import logHandler
 import scriptHandler
+import speech
 import tones
 import ui
 from PIL import ImageGrab
@@ -74,6 +75,64 @@ confspec = {
 config.conf.spec[CONFIG_SECTION] = confspec
 
 
+def ensureBaseOnlySection() -> None:
+	"""把配置节登记为 NVDA 2026.3+ 的“基础配置”节，使其不再随配置档案切换。
+
+	NVDA 2026.3 新增 `config.configSections.registerSection`：登记会写进
+	`customSections.yaml`，NVDA 下次启动时先于配置管理器加载；`isBaseOnly=True`
+	表示该节只存在于基础配置。因此**本次运行内仍可能受配置档案影响，重启后才固定**。
+	2026.1/2026.2 没有这套 API，跳过即可：`config.conf.spec[...]` 兜底仍然有效。
+	"""
+	configSections = getattr(config, "configSections", None)
+	if configSections is None:
+		logHandler.log.info("LION lite: 当前 NVDA 无 configSections API，配置节仍受配置档案影响")
+		return
+	baseOnlySections = getattr(config.conf, "BASE_ONLY_SECTIONS", ())
+	if CONFIG_SECTION in baseOnlySections:
+		logHandler.log.info("LION lite: 配置节已登记为全局（基础配置），不受配置档案影响")
+		return
+	try:
+		configSections.registerSection(CONFIG_SECTION, confspec, isBaseOnly=True)
+	except Exception:  # noqa: BLE001 - 登记失败不应影响插件加载，配置节退化为旧行为
+		logHandler.log.debugWarning("LION lite: 配置节登记失败", exc_info=True)
+		return
+	logHandler.log.info("LION lite: 配置节已登记为全局（基础配置），下次重启 NVDA 后生效")
+
+
+def logActiveProfileSections() -> None:
+	"""启动时检查活动配置档案里是否残留本插件节，并说明这些设置当前是否生效。"""
+	profiles = list(getattr(config.conf, "profiles", ()) or ())
+	if len(profiles) <= 1:
+		return
+	hasApi = getattr(config, "configSections", None) is not None
+	baseOnly = CONFIG_SECTION in getattr(config.conf, "BASE_ONLY_SECTIONS", ())
+	for profile in profiles[1:]:
+		try:
+			if CONFIG_SECTION not in profile:
+				continue
+		except Exception:  # noqa: BLE001 - 配置档案对象异常类型未知，跳过即可
+			continue
+		name = getattr(profile, "name", "") or "(未命名)"
+		if baseOnly:
+			logHandler.log.info("LION lite: 活动配置档案 %s 中的本插件设置已忽略（配置节固定为基础配置）", name)
+		elif hasApi:
+			logHandler.log.info(
+				"LION lite: 活动配置档案 %s 中仍有本插件设置；重启 NVDA 后配置节固定为基础配置，档案内设置将被忽略",
+				name,
+			)
+		else:
+			logHandler.log.info("LION lite: 活动配置档案 %s 中的本插件设置会随档案生效（当前 NVDA 无配置节 API）", name)
+
+
+#: 模块加载时登记一次：2026.3+ 写入 customSections.yaml（下次启动生效），旧版本直接跳过。
+ensureBaseOnlySection()
+logActiveProfileSections()
+
+#: 空帧宽限：连续空结果持续这么久才清空已朗读文本（prevString），
+#: 避免一帧 OCR 闪空导致同一句被重新朗读（与完整版 dedup.EMPTY_GRACE_SECONDS 一致）。
+EMPTY_GRACE_SECONDS = 2.0
+
+
 def makeOcrClient(cfg=None) -> HttpOcrClient:
 	"""按当前设置构造一个 OCR 客户端。"""
 	cfg = config.conf[CONFIG_SECTION] if cfg is None else cfg
@@ -97,15 +156,28 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		self.ocr = makeOcrClient()
 		# 连续失败只在第一次提示，避免每 1 秒刷屏
 		self._errorReported = False
-		gui.settingsDialogs.NVDASettingsDialog.categoryClasses.append(LIONSettingsPanel)
+		# 空帧宽限状态：None 表示上一帧还有识别结果，见 EMPTY_GRACE_SECONDS
+		self._emptySince = None
+		# 时钟做成实例属性，测试可替换成虚拟时钟，避免依赖真实墙钟
+		self._now = time.monotonic
+		# 幂等注册：NVDA 2026.3 起插件更新时旧模块可能残留（#18971），
+		# 面板列表在 gui 模块里跨重载存活，重复 append 会出现多个 "LION modified lite" 面板
+		panelClasses = gui.settingsDialogs.NVDASettingsDialog.categoryClasses
+		if LIONSettingsPanel not in panelClasses:
+			panelClasses.append(LIONSettingsPanel)
 
 	def terminate(self):
-		try:
-			gui.settingsDialogs.NVDASettingsDialog.categoryClasses.remove(LIONSettingsPanel)
-		except ValueError:
-			pass
 		global active
 		active = False
+		# 退出时立即中断朗读，避免插件卸载后语音还在继续
+		try:
+			speech.cancelSpeech()
+		except Exception:  # noqa: BLE001 - 退出路径不应抛异常
+			logHandler.log.debugWarning("LION lite: cancelSpeech failed", exc_info=True)
+		# 幂等卸载：插件更新/重载时列表里可能有残留条目，全部移除
+		panelClasses = gui.settingsDialogs.NVDASettingsDialog.categoryClasses
+		while LIONSettingsPanel in panelClasses:
+			panelClasses.remove(LIONSettingsPanel)
 
 	def isScreenCurtainRunning(self):
 		from screenCurtain import screenCurtain
@@ -133,10 +205,11 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def getDynamicTargetRect(self):
 		cfg = config.conf[CONFIG_SECTION]
 		target_type = cfg["target"]
+		if target_type == 1:
+			# 整屏：直接用屏幕尺寸，不必构造矩形再走 .location 回退（原死路径）
+			return self.cropRectLTWH(locationHelper.RectLTWH(0, 0, resX, resY))
 		if target_type == 0:
 			obj = api.getNavigatorObject()
-		elif target_type == 1:
-			obj = locationHelper.RectLTWH(0, 0, resX, resY)
 		elif target_type == 2:
 			obj = api.getForegroundObject()
 		else:
@@ -195,9 +268,24 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		self._errorReported = True
 		ui.message(_("LION: OCR service unavailable. %s") % message)
 
+	def observeEmptyFrame(self, now: float):
+		"""空帧宽限：连续空结果持续 EMPTY_GRACE_SECONDS 才清空已朗读文本。
+
+		单帧或短暂的空结果（OCR 抖动/眨眼）不动 prevString，避免短暂闪空后
+		同一句被重新朗读；没有这个宽限期，对话框清空后同一句又永远不会再读。
+		"""
+		global prevString
+		if self._emptySince is None:
+			self._emptySince = now
+		elif (now - self._emptySince) >= EMPTY_GRACE_SECONDS:
+			prevString = ""
+			self._emptySince = None
+
 	def OcrScreen(self):
 		global prevString
 		try:
+			# 每帧只取一次时间，空帧宽限按帧时间判断（测试可替换 self._now 使用虚拟时钟）
+			now = self._now()
 			rect = self.getDynamicTargetRect()
 			img = ImageGrab.grab(bbox=(rect.left, rect.top, rect.left + rect.width, rect.top + rect.height))
 			res = self.ocr.runBytes(self.ocr.encodeImage(img))
@@ -207,11 +295,14 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				return
 			self._errorReported = False
 			all_text = " ".join([line["text"] for line in res["data"]])
-			if not all_text:
-				return
-
 			all_text = self.filterText(all_text)
-			if all_text and SequenceMatcher(None, prevString, all_text).ratio() < config.conf[CONFIG_SECTION]["threshold"]:
+			if not all_text:
+				# 空帧：过滤后为空也算，短暂闪空不清状态，持续到宽限期才复位
+				self.observeEmptyFrame(now)
+				return
+			self._emptySince = None
+			# autojunk 默认会让 ≥200 字的重复文本相似度算不出来，必须显式关闭
+			if SequenceMatcher(None, prevString, all_text, autojunk=False).ratio() < config.conf[CONFIG_SECTION]["threshold"]:
 				ui.message(all_text)
 				prevString = all_text
 		except Exception as error:

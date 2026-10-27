@@ -14,7 +14,7 @@ concurrency:
 jobs:
   test:
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -35,7 +35,25 @@ jobs:
           Write-Host 'No private paths found.'
           exit 0
 
-      - name: Run offline test suite
+      # 先打包再测试：包级用例（test_package / lite 产物检查）只有 dist/ 里有包时才运行，
+      # 它们负责校验版本号、条目清单、体积预算与"产物与 src 一致"，是发版前的最后一道闸门。
+      - name: Build full add-on
+        shell: pwsh
+        env:
+          PYTHONIOENCODING: utf-8
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/build_addon.ps1 -Variant full -Python python
+
+      - name: Build lite add-on
+        shell: pwsh
+        env:
+          PYTHONIOENCODING: utf-8
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/build_addon.ps1 -Variant lite -Python python
+
+      - name: Run offline test suite (with built artifacts)
         env:
           PYTHONIOENCODING: utf-8
           PYTHONDONTWRITEBYTECODE: "1"

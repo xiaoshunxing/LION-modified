@@ -15,6 +15,7 @@ from __future__ import annotations
 import os
 import sys
 import unittest
+from difflib import SequenceMatcher
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import nvda_stubs  # noqa: E402
@@ -116,6 +117,20 @@ class SimilarityTests(unittest.TestCase):
 		line = "这是一个比较长的字幕句子用来验证相似度计算" * 8
 		self.assertEqual(dedup.similarityRatio(line, line), 1.0)
 		self.assertLess(dedup.similarityRatio(line, "完全不同的另一段文字" * 8), 0.5)
+
+	def testLongRepetitiveTextSimilarityIsNotUnderestimated(self):
+		"""≥200 字的高重复 CJK 文本：位置偏移时相似度不能被大幅低估。
+
+		difflib 的 autojunk 会把常用字当噪声；实测 250 字重复字幕只偏移 30 字，
+		相似度从 0.94 掉到 0.11。classic 策略是"相似度低于阈值才朗读"，所以低估会让
+		同一句被每帧反复朗读（不是"永远不念"）。这里同时锁定正确值与原始行为。
+		"""
+		line = "这是一个比较长的字幕句子用来验证相似度计算反复出现" * 10  # 250 字
+		self.assertEqual(dedup.similarityRatio(line, line), 1.0)
+		shifted = line[:30] + line
+		self.assertGreaterEqual(dedup.similarityRatio(line, shifted), 0.8)
+		# 对照：默认 autojunk=True 会把同一句的相似度压到阈值以下（旧 bug 的来源）
+		self.assertLess(SequenceMatcher(None, line, shifted).ratio(), 0.5)
 
 	def testPrefixGrowthIsSimilar(self):
 		"""打字机增长之所以会被 classic 判为"没变"，正是因为它相似度越来越高。"""

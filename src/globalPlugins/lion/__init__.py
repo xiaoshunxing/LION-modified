@@ -9,14 +9,13 @@
 import re
 import threading
 import time
-from difflib import SequenceMatcher
+from threading import Event
 
 import addonHandler
 import api
 import config
 import globalPluginHandler
 import gui
-import locationHelper
 import logHandler
 import scriptHandler
 import speech
@@ -70,6 +69,10 @@ confspec = {
 	# 区域列表的 JSON，例如
 	# [{"id":1,"name":"字幕","enabled":true,"target":1,"cropUp":70,"cropDown":0,"cropLeft":0,"cropRight":0}]
 	"regions": "string(default='[]')",
+	# 合并所有启用区域的截图：先抓一次并集，再在本地裁剪。
+	# 区域较少且彼此靠近时能减少抓屏次数；区域相隔很远时并集接近全屏，
+	# 单次抓屏反而更慢，所以默认关闭、由用户按需开启（保证默认行为不变）。
+	"mergeCapture": "boolean(default=False)",
 	# True：每个有变化的区域各入队一条朗读，互不打断；False：打断式，只读最后一条
 	"queueSpeech": "boolean(default=False)",
 	# ---- 识别参数 ----
@@ -78,6 +81,52 @@ confspec = {
 	"regexFilters": "string(default='')",
 }
 config.conf.spec[CONFIG_SECTION] = confspec
+
+
+def _baseOnlySections() -> tuple:
+	"""NVDA 2026.3+ 的“仅基础配置”节集合；旧版本没有该属性时返回空元组。"""
+	return getattr(config.conf, "BASE_ONLY_SECTIONS", ())
+
+
+def ensureBaseOnlySection() -> None:
+	"""把配置节登记为“仅基础配置”，使其不随 NVDA 配置档案（Profile）变化。
+
+	NVDA 2026.3 起才有 `config.configSections`；登记会写入 `customSections.yaml`，
+	**下次启动**才生效。正常安装由 `installTasks.py` 完成；这里兜底覆盖侧载、
+	手工复制到 addons 目录、scratchpad 等未执行 installTasks 的情况。
+	"""
+	configSections = getattr(config, "configSections", None)
+	if configSections is None:
+		logHandler.log.debug("LION: NVDA < 2026.3，配置节仍会随配置档案变化")
+		return
+	if CONFIG_SECTION in _baseOnlySections():
+		logHandler.log.debug("LION: 配置节已固定为基础配置（全局）")
+		return
+	try:
+		configSections.registerSection(CONFIG_SECTION, confspec, isBaseOnly=True)
+		logHandler.log.info("LION: 已把配置节登记为全局（base-only），重启 NVDA 后生效")
+	except Exception:  # noqa: BLE001 - 登记失败不应影响插件加载
+		logHandler.log.debugWarning("LION: 登记 base-only 配置节失败", exc_info=True)
+
+
+def reportProfileOverrides() -> None:
+	"""base-only 生效后，提示活动配置档案里被忽略的本插件设置。"""
+	if CONFIG_SECTION not in _baseOnlySections():
+		return
+	profiles = list(getattr(config.conf, "profiles", []) or [])
+	for profile in profiles[1:]:
+		try:
+			if CONFIG_SECTION in profile:
+				name = getattr(profile, "name", "?")
+				logHandler.log.info(
+					"LION: 配置档案 %s 中的插件设置已被忽略（配置节固定为全局）", name
+				)
+		except Exception:  # noqa: BLE001 - 检测失败不影响插件加载
+			continue
+
+
+ensureBaseOnlySection()
+reportProfileOverrides()
 
 
 def makeOcrClient(cfg=None) -> HttpOcrClient:
@@ -95,18 +144,23 @@ def makeOcrClient(cfg=None) -> HttpOcrClient:
 	)
 
 
-def similarityRatio(previous: str, current: str) -> float:
-	"""比较两段识别文本的相似度（0.0–1.0）。
+def registerSettingsPanel(panelClass) -> None:
+	"""把设置面板注册进 NVDA 设置对话框（幂等）。
 
-	**必须显式传 `autojunk=False`。** `difflib` 默认会对长度 ≥ 200 的序列启用
-	"autojunk"，把出现次数超过 1% 的元素当成噪声忽略；中日韩文本里常用字重复率极高，
-	于是"新句 字幕 / 新句 字幕"这类真实字幕会被判定为相似度过高而**永远不再朗读**。
-	识别结果通常只有几十个字，关掉这个启发式既准确又几乎不增加开销。
+	插件更新/模块重载时 `__init__` 可能被调用不止一次，而
+	`gui.settingsDialogs.NVDASettingsDialog.categoryClasses` 是 NVDA 模块里的
+	普通列表、会跨重载存活；先判重可避免设置里出现两个同名面板。
 	"""
-	try:
-		return SequenceMatcher(None, previous, current, autojunk=False).ratio()
-	except Exception:  # noqa: BLE001 - 比较失败时视为"变了"，宁可多读一次
-		return 0.0
+	panels = gui.settingsDialogs.NVDASettingsDialog.categoryClasses
+	if panelClass not in panels:
+		panels.append(panelClass)
+
+
+def unregisterSettingsPanel(panelClass) -> None:
+	"""移除设置面板（幂等，允许重复调用）。"""
+	panels = gui.settingsDialogs.NVDASettingsDialog.categoryClasses
+	while panelClass in panels:
+		panels.remove(panelClass)
 
 
 def loadRegions() -> list:
@@ -166,19 +220,23 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		super(GlobalPlugin, self).__init__()
 		ensureRegionsMigrated()
 		ensureServiceMigrated()
-		self.ocr = makeOcrClient()
-		# 每个区域一套去重状态（策略见各区域的 dedup 字段）与"是否已提示过失败"
+		#: 按设置缓存的 OCR 客户端（设置变化时由 ocrClient() 重建）
+		self._client = None
+		self._clientSignature = None
+		#: 可被“停止识别”立刻唤醒的等待事件（替代不可中断的 time.sleep）
+		self._stopEvent = Event()
+		#: 每个区域一套去重状态（策略见各区域的 dedup 字段）与"是否已提示过失败"
 		self._dedup = dedup.DedupEngine()
 		self._errorReported: dict = {}
-		gui.settingsDialogs.NVDASettingsDialog.categoryClasses.append(LIONSettingsPanel)
+		registerSettingsPanel(LIONSettingsPanel)
 
 	def terminate(self):
-		try:
-			gui.settingsDialogs.NVDASettingsDialog.categoryClasses.remove(LIONSettingsPanel)
-		except ValueError:
-			pass
+		unregisterSettingsPanel(LIONSettingsPanel)
 		global active
 		active = False
+		# 让还在 wait 的轮询立刻醒来；正在进行的 HTTP 请求会在返回后看到 active=False
+		self._ensureStopEvent().set()
+		self._resetClient()
 		# 清空可能还在排队的朗读，避免停止后继续念
 		try:
 			self._dedup.reset()
@@ -188,6 +246,54 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			speech.cancelSpeech()
 		except Exception:  # noqa: BLE001 - 退出路径不应抛异常
 			logHandler.log.debugWarning("LION: cancelSpeech failed", exc_info=True)
+
+	# ------------------------------------------------------------ 运行期辅助
+
+	def _ensureStopEvent(self):
+		"""取出（必要时创建）停止事件。
+
+		测试会用 `GlobalPlugin.__new__` 直接构造实例而不调用 `__init__`，
+		所以这里做惰性创建，保证这些路径也能正常工作。
+		"""
+		event = getattr(self, "_stopEvent", None)
+		if event is None:
+			event = Event()
+			self._stopEvent = event
+		return event
+
+	def _resetClient(self) -> None:
+		"""丢弃缓存的 OCR 客户端，下次识别时按最新设置重建。"""
+		self._client = None
+		self._clientSignature = None
+
+	def _currentClientSignature(self) -> tuple:
+		"""客户端相关设置的快照；设置一变就重建客户端。"""
+		conf = config.conf[CONFIG_SECTION]
+		return (
+			conf["serviceUrl"],
+			conf["model"],
+			conf["serviceToken"],
+			float(conf["requestTimeout"]),
+			int(conf["imageFormat"]),
+			bool(conf["visualize"]),
+			float(conf["scoreThresh"]),
+			int(conf["detLimitSideLen"]),
+		)
+
+	def ocrClient(self) -> HttpOcrClient:
+		"""返回按当前设置缓存的 OCR 客户端，设置变化时自动重建。
+
+		轮询期间不再"每个区域、每一帧"新建客户端；只有在设置（地址/模型/令牌/
+		超时/图像格式/可视化/分数/最长边）变化后才重建。这样既减少对象分配，
+		也避免同一轮抓屏里出现两套不一致的请求参数。
+		"""
+		signature = self._currentClientSignature()
+		client = getattr(self, "_client", None)
+		if client is None or getattr(self, "_clientSignature", None) != signature:
+			client = makeOcrClient()
+			self._client = client
+			self._clientSignature = signature
+		return client
 
 	def isScreenCurtainRunning(self):
 		from screenCurtain import screenCurtain
@@ -204,13 +310,15 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		if not active:
 			active = True
 			# 每次启动都按最新设置重建客户端，并清空上一轮的去重状态
-			self.ocr = makeOcrClient()
+			self._resetClient()
+			self._ensureStopEvent().clear()
 			self._dedup.reset()
 			self._errorReported = {}
 			ui.message(_("lion started"))
 			threading.Thread(target=self.ocrLoop, daemon=True).start()
 		else:
 			active = False
+			self._ensureStopEvent().set()
 			ui.message(_("lion stopped"))
 
 	# ------------------------------------------------------------ 区域与几何
@@ -254,10 +362,50 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			result.append((index, region, rect))
 		return result
 
+	# ---------------------------------------------------------------- 抓屏
+
+	def captureRegionImage(self, rect, sharedImage=None, union=None):
+		"""抓取一个区域的截图。
+
+		传了 `sharedImage`（合并截图）与 `union` 时，从共享截图里裁剪对应区域；
+		否则单独抓这个区域。裁剪异常由调用方按"该区域失败"处理。
+		"""
+		if sharedImage is not None and union is not None:
+			left = rect["left"] - union["left"]
+			top = rect["top"] - union["top"]
+			return sharedImage.crop((left, top, left + rect["width"], top + rect["height"]))
+		return ImageGrab.grab(
+			bbox=(rect["left"], rect["top"], rect["left"] + rect["width"], rect["top"] + rect["height"])
+		)
+
+	def grabMergedImage(self, entries) -> tuple:
+		"""一次抓取所有启用区域的并集，返回 `(image, unionRect)`。
+
+		没有可抓区域或抓屏失败时返回 `(None, None)`，调用方会退回逐区域抓屏——
+		"合并截图"只是可选优化，不能因为它整轮没有信息。
+		"""
+		union = regionModel.unionRect([rect for _index, _region, rect in entries])
+		if union is None:
+			return None, None
+		try:
+			image = ImageGrab.grab(
+				bbox=(
+					union["left"],
+					union["top"],
+					union["left"] + union["width"],
+					union["top"] + union["height"],
+				)
+			)
+		except Exception:  # noqa: BLE001 - 优化失败不应影响识别主流程
+			logHandler.log.debugWarning("LION: 合并区域截图失败，退回逐区域抓屏", exc_info=True)
+			return None, None
+		return image, union
+
 	# ---------------------------------------------------------------- 主循环
 
 	def ocrLoop(self):
 		global active
+		stopEvent = self._ensureStopEvent()
 		while active:
 			try:
 				self.OcrScreen()
@@ -265,7 +413,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				logHandler.log.error("LION: OCR loop error: %s", error, exc_info=True)
 			if not active:
 				break
-			time.sleep(max(0.05, float(config.conf[CONFIG_SECTION]["interval"])))
+			# 用 Event.wait 代替 time.sleep：点击“停止识别”后不必再等完整个间隔
+			stopEvent.wait(max(0.05, float(config.conf[CONFIG_SECTION]["interval"])))
 
 	def filterText(self, text: str) -> str:
 		"""按设置里的正则过滤识别结果，并规整空白。
@@ -316,8 +465,11 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		"""识别所有勾选区域，返回 `(changedTexts, failures)`。
 
 		`changedTexts` 是按区域顺序的"文本有变化"列表；`failures` 是
-		`[(regionId, regionName, message), ...]`。每个区域用**独立客户端**，
-		这样失败信息不会被其它区域覆盖。
+		`[(regionId, regionName, message), ...]`。每个区域的截图/识别失败互相隔离。
+
+		`mergeCapture` 开启且勾选了多于一个区域时，先抓一次所有区域的并集，
+		再在本地按区域裁剪（把 N 次抓屏降成 1 次）；合并截图或裁剪失败时，
+		该区域会自动退回单独抓屏，保证不会因为优化而丢信息。
 		"""
 		changed = []
 		failures = []
@@ -326,15 +478,28 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		configured = loadRegions()
 		self._dedup.prune(configured)
 		self._errorReported = regionModel.pruneState(self._errorReported, configured)
-		threshold = config.conf[CONFIG_SECTION]["threshold"]
+		conf = config.conf[CONFIG_SECTION]
+		globalThreshold = conf.get("threshold", 0.5)
+		sharedImage = None
+		union = None
+		if len(entries) > 1 and bool(conf.get("mergeCapture", False)):
+			sharedImage, union = self.grabMergedImage(entries)
 		for index, region, rect in entries:
 			regionId = region["id"]
 			label = regionModel.defaultName(region, index)
+			# 每区域可覆盖经典相似度阈值；None/非法时跟随全局默认值
+			threshold = regionModel.resolveClassicThreshold(region, globalThreshold)
 			# 时间只在插件里取一次，去重状态机本身不读时钟（便于测试）
 			now = time.monotonic()
 			try:
-				image = ImageGrab.grab(bbox=(rect["left"], rect["top"], rect["left"] + rect["width"], rect["top"] + rect["height"]))
-				client = makeOcrClient()
+				try:
+					image = self.captureRegionImage(rect, sharedImage, union)
+				except Exception:  # noqa: BLE001 - 合并截图裁剪失败：该区域退回单独抓屏
+					logHandler.log.debugWarning(
+						"LION: 从合并截图裁剪区域 [%s] 失败，退回单独抓屏", label, exc_info=True
+					)
+					image = self.captureRegionImage(rect)
+				client = self.ocrClient()
 				result = client.runBytes(client.encodeImage(image))
 			except Exception as error:  # noqa: BLE001 - 单区域失败不影响其它区域
 				message = str(error)
@@ -349,18 +514,25 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				continue
 			self._errorReported[regionId] = False
 			text = self.filterText(" ".join([line["text"] for line in result["data"]]))
-			if not text:
-				# 空结果也要喂给去重引擎（对话框清空 = 允许同一句再次朗读）
-				self._dedup.observe(regionId, text, region["dedup"], region["dedupHoldMs"], now, threshold)
-				continue
-			for event in self._dedup.observe(
+			# 空结果也要喂给去重引擎（对话框清空 = 允许同一句再次朗读）
+			events = self._dedup.observe(
 				regionId,
 				text,
 				region["dedup"],
 				region["dedupHoldMs"],
 				now,
 				threshold,
-			):
+			)
+			# 排查“某区域不播报”用：仅 debug 级别，记录有效阈值与判定结果
+			logHandler.log.debug(
+				"LION: 区域[%s] mode=%s 有效阈值=%.2f 文本=%d 字 事件=%d",
+				label,
+				region["dedup"],
+				threshold,
+				len(text),
+				len(events),
+			)
+			for event in events:
 				changed.append(event.text)
 		return changed, failures
 

@@ -60,8 +60,4 @@
 
 本插件基于 LION 修改，与 NV Access 及原版作者没有隶属关系；按 GPL 协议“不提供担保”分发。
 
-AI 创作声明：本修改版新增文案由 AI 参与创作；上游原文除外。
-
-代码声明：本修改版代码在原版 LION 基础上由 AI 参与编写。
-
-模型版本：DeepSeek-V4.1-Flash。
+[![](https://img.shields.io/badge/powered_by-dsh-4D6BFE?style=flat-square&logo=deepseek&logoColor=white)](https://github.com/deepseek-ai/deepseek-harness)

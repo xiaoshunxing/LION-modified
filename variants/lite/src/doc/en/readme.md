@@ -2,7 +2,7 @@
 
 This is the lite edition of [LION modified (full edition)](https://github.com/xiaoshunxing/LION-modified/blob/main/src/doc/en/readme.md):
 it keeps the single-area, near-original layout of LION, uses an external PaddleOCR HTTP service, and shares
-the same client as the full edition **3.3.7**.
+the same client as the full edition **3.3.8**.
 
 ## What it does
 
@@ -51,10 +51,22 @@ fast-endpoint recognition test in one go.
 4. **Crop above/below/left/right (%)** – crop percentages; about 70% from above is typical for subtitles.
 5. **Regular expression filters** – one regex per line; matches are removed from the result.
 
+## Configuration profiles
+
+Starting with NVDA 2026.3, the add-on's settings are always stored in the **base configuration** and no longer
+follow configuration profiles; activating a profile no longer saves this add-on's settings into it. The first
+start after upgrading registers the config section as base-only — **restart NVDA once more** for it to take
+full effect.
+
+NVDA 2026.1/2026.2 has no such mechanism, so settings there are still written to the active profile. We therefore
+recommend changing this add-on's settings in the **base configuration**. If your settings appear to be back at
+their defaults after upgrading, check whether they were saved in a profile (switch to that profile, then re-enter
+the values you need in the base configuration).
+
 ## Versioning
 
 The major version follows upstream **3.3** (original LION 3.3.0); releases use **3.3.N** and this release is
-**3.3.7**. Packages are distributed through GitHub Releases.
+**3.3.8**. Packages are distributed through GitHub Releases.
 
 ## Licence and credits
 
@@ -63,6 +75,4 @@ The major version follows upstream **3.3** (original LION 3.3.0); releases use *
 - Original authorship is fully preserved; lite edition and UI wording by xiaoshunxing.
 - This add-on is based on LION; we are not affiliated with NV Access or the original authors.
 
-AI disclosure: New text in this modification was created with AI participation; upstream original text is excluded.
-
-Model version: DeepSeek-V4.1-Flash.
+[![powered by dsh](../dsh-badge.png)](https://github.com/deepseek-ai/deepseek-harness)

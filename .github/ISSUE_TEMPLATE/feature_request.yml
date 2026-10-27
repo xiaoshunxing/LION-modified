@@ -47,8 +47,4 @@ body:
   - type: markdown
     attributes:
       value: |
-        AI 创作声明：本模板由 AI 参与创作。
-
-        代码声明：本修改版代码在原版 LION 基础上由 AI 参与编写。
-
-        模型版本：DeepSeek-V4.1-Flash。
+        [![](https://img.shields.io/badge/powered_by-dsh-4D6BFE?style=flat-square&logo=deepseek&logoColor=white)](https://github.com/deepseek-ai/deepseek-harness)

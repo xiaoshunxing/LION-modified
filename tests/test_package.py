@@ -36,9 +36,9 @@ if _configobj is not None:
 	ConfigObj, Validator, VdtTypeError, VdtValueError = _configobj
 
 EXPECTED_NAME = "LION-modified"
-EXPECTED_VERSION = "3.3.7"
+EXPECTED_VERSION = "3.3.8"
 
-#: 取自 NVDA 2026.2 的 addonHandler.AddonManifest.configspec
+#: 取自 NVDA 2026.3 的 addonHandler.AddonManifest.configspec
 MANIFEST_SPEC = """
 name = string()
 summary = string()
@@ -131,6 +131,8 @@ class BundleStructureTests(unittest.TestCase):
 			"globalPlugins/lion/ocrClient.py",
 			"globalPlugins/lion/lionGui.py",
 			"globalPlugins/lion/regions.py",
+			"installTasks.py",
+			"doc/dsh-badge.png",
 			"doc/zh_CN/readme.md",
 			"doc/zh_CN/readme.html",
 			"doc/en/readme.md",
@@ -160,6 +162,16 @@ class BundleStructureTests(unittest.TestCase):
 					"原版内容必须在修改版章节之前",
 				)
 
+	def testReadmeHtmlContainsDshBadge(self):
+		"""生成的 readme.html 必须在文末渲染出 dsh 官方徽章（本地 PNG + 项目链接）。"""
+		for lang in ("zh_CN", "en"):
+			with self.subTest(lang=lang):
+				with self.extracted.read(f"doc/{lang}/readme.html") as handle:
+					html = handle.read()
+				self.assertIn("dsh-badge.png", html)
+				self.assertIn("https://github.com/deepseek-ai/deepseek-harness", html)
+				self.assertIn("<img", html)
+
 	def testManifestKeepsOriginalBlockFirst(self):
 		"""描述与变更日志各自都要"原版在上、修改版在下"（分别按字段检查）。"""
 		with self.extracted.read("manifest.ini") as handle:
@@ -188,6 +200,7 @@ class BundleStructureTests(unittest.TestCase):
 			"变更日志里原版内容必须在前",
 		)
 		self.assertIn("使用正则过滤识别文本", changelog)
+		self.assertIn("版本 3.3.8", changelog)
 		self.assertIn("版本 3.3.7", changelog)
 		self.assertIn("版本 3.3.2", changelog)
 

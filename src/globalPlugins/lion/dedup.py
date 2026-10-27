@@ -171,7 +171,10 @@ def similarityRatio(previous: str, current: str) -> float:
 
 	**必须显式传 `autojunk=False`。** `difflib` 默认会对长度 ≥ 200 的序列启用
 	"autojunk"，把出现次数超过 1% 的元素当成噪声忽略；中日韩文本里常用字重复率极高，
-	于是长句会被判定为相似度过高而**永远不再朗读**。
+	一旦文本位置/行序有偏移（例如本帧多识别出上一行、行序被重排），相似度会被**大幅低估**
+	（实测 250 字重复字幕只偏移 30 字：0.94 → 0.11）。而 `classic` 的策略是
+	"相似度低于阈值才朗读"，低估就会把同一句当成"变了"，**每帧反复朗读**。
+	识别结果通常只有几十个字，关掉这个启发式既准确又几乎不增加开销。
 	"""
 	try:
 		return SequenceMatcher(None, previous, current, autojunk=False).ratio()
@@ -445,7 +448,12 @@ class DedupEngine:
 		now: float,
 		threshold: float = 0.5,
 	) -> list:
-		"""处理一帧识别结果，返回本帧应当朗读的事件列表（多数帧为空）。"""
+		"""处理一帧识别结果，返回本帧应当朗读的事件列表（多数帧为空）。
+
+		`threshold` 只在 `classic` 策略里使用（相似度**低于**阈值才朗读）；
+		`commit`/`incremental`/`off` 不读它。调用方可以按区域传入解析后的
+		有效阈值（区域覆盖或全局默认），本状态机与全局配置无关。
+		"""
 		mode = clampMode(mode)
 		holdMs = clampHold(holdMs)
 		text = text or ""
@@ -503,16 +511,18 @@ class DedupEngine:
 		"""内容"不再有新的进展"已超过上限 → 视为屏幕上永远有动画/滚动，强制释放一次。
 
 		3.3.4 起：
-		* ``unstableSince`` 在"这一帧与上一帧完全相同"（即文字稳定）时才刷新，
-		  所以滚动框/动画这种"每帧都在换但一直不稳定"的情况最终会被兜底念一次；
-		* 正常长句逐字打字是 growth，也会刷新它，因此**不会**被兜底打断。
+		* ``unstableSince`` 只在出现**实质进展**（growth：文字变长；replace：换了一句）
+		  时刷新，所以正常的长句逐字打字永远不会被 10 秒兜底打断；
+		* 抖动帧（jitter：只差一个错字/空白）与完全相同的帧**不刷新**它；
+		  因此"每帧都在变、却一直不稳定"的滚动框/动画，会在最后一次实质进展
+		  过去 10 秒后被兜底念一次，而不是永远不念。
 		"""
 		return (now - state.unstableSince) >= MAX_PENDING_SECONDS
 
 	# ---------------------------------------------------------------- 策略实现
 
 	def _classic(self, state: _RegionState, text: str, threshold: float, now: float) -> list:
-		"""原有行为：与上次朗读的文本相似度低于阈值才念。"""
+		"""原有行为：与上次朗读的文本相似度**低于**阈值才念（阈值越低越严格）。"""
 		changed = similarityRatio(state.announcedFull, text) < threshold
 		state.holdSince = now
 		if not changed:
@@ -523,10 +533,12 @@ class DedupEngine:
 		return [SpeechEvent(text, "classic")]
 
 	def _off(self, state: _RegionState, text: str, now: float) -> list:
-		"""排障用：只要和上一帧不同就念。"""
-		changed = text != state.lastSeen or state.announcedFull != text
+		"""排障用：只要和上次朗读的文本不同就念。"""
+		# 与上一帧是否相同由 observe() 的 jitter/same 分支处理；
+		# 这里只关心"和已朗读过的内容是否不同"，避免同一句念两遍。
+		changed = state.announcedFull != text
 		state.holdSince = now
-		if not changed or state.announcedFull == text:
+		if not changed:
 			return []
 		state.announced = text
 		state.announcedFull = text

@@ -160,8 +160,8 @@ foreach ($entry in $entries) {
 		$problems += "禁止条目：$entry"
 	}
 }
-foreach ($required in 'manifest.ini', "$packageEntry/__init__.py", "$packageEntry/ocrClient.py",
-	"$packageEntry/lionGui.py", 'doc/zh_CN/readme.html', 'doc/en/readme.html',
+foreach ($required in 'manifest.ini', 'installTasks.py', "$packageEntry/__init__.py", "$packageEntry/ocrClient.py",
+	"$packageEntry/lionGui.py", 'doc/zh_CN/readme.html', 'doc/en/readme.html', 'doc/dsh-badge.png',
 	'locale/zh_CN/LC_MESSAGES/nvda.mo', 'locale/zh_CN/LC_MESSAGES/nvda.po') {
 	if ($entries -notcontains $required) { $problems += "缺少必需条目：$required" }
 }

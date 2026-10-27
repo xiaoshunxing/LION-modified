@@ -7,7 +7,7 @@
 **外部 PaddleOCR HTTP 服务**，并加入多区域识别、分区去重、排队朗读、自定义模型/端点。
 本插件与 NV Access 及原版作者没有隶属关系；许可为 **GPL-2.0-or-later**。
 
-本仓库首个 GitHub 发布为 **3.3.7**；公开版本迭代为 **3.3.1–3.3.7**，当前版本 **3.3.7**。
+本仓库首个 GitHub 发布为 **3.3.7**；公开版本迭代为 **3.3.1–3.3.8**，当前版本 **3.3.8**。
 完整变更见 [CHANGELOG.md](CHANGELOG.md)，Release 页面附有历史版本摘要。
 
 ## 两个版本
@@ -26,12 +26,15 @@
 
 - 定时识别屏幕指定区域，只朗读变化明显的文本；适用于字幕、游戏对话和无法直接读取的界面文字。
 - 完整版另有多区域、分区去重和排队朗读，差异见上表。
+- 完整版可选「合并区域截图」：一次抓取所有区域再本地裁剪，减少抓屏次数（默认关闭，区域靠近时更划算）。
+- 完整版每个区域可单独设置经典相似度阈值（默认跟随全局默认值）。
+- 配置节在 NVDA 2026.3 起固定为基础配置，不随配置档案（Profile）与触发器变化。
 - 外部服务：服务地址 + 模型/端点，支持常见端点或自定义 URL。
 - “测试 / 获取模型”：探活 → 模型列表 → 令牌校验 → 快端点识别测试。
 
 ## 环境要求
 
-- NVDA 2026.1 或更高（2026.2 已测试）。
+- NVDA 2026.1 或更高（2026.3 已测试；配置档案全局化需要 2026.3+）。
 - 推荐在本机部署 PaddleOCR HTTP 服务：延迟低，令牌不必出本机。
   下文以 `http://127.0.0.1:23353` 为例；请按实际部署替换地址、端点和令牌。
   - `/ocr`：常见快速端点示例，适合屏幕字幕；
@@ -50,15 +53,18 @@
 ## 构建与测试
 
 ```powershell
+# 1. 打包（包级测试需要 dist/ 里的产物才会运行）
+#    执行策略默认拒绝未签名脚本时，加 -ExecutionPolicy Bypass
+pwsh -File scripts\build_addon.ps1 -Variant full -Python python
+pwsh -File scripts\build_addon.ps1 -Variant lite -Python python
+
+# 2. 离线全量测试（含包级用例）
 $env:PYTHONIOENCODING = 'utf-8'
 $env:PYTHONDONTWRITEBYTECODE = '1'
 python -m unittest discover -s tests -p 'test_*.py'
-
-# 指定 Python 解释器（也可用 LION_PYTHON 环境变量）
-pwsh -File scripts\build_addon.ps1 -Variant full -Python python
-pwsh -File scripts\build_addon.ps1 -Variant lite -Python python
 ```
 
+- 指定 Python 解释器：`-Python <路径>`，或设置 `$env:LION_PYTHON`；
 - 离线测试：`$env:LION_SKIP_SERVICE_PROBE = '1'`、`$env:LION_TEST_LIVE = '0'`。
 - 在线测试令牌：`LION_TEST_TOKEN` 或 `LION_TEST_TOKEN_FILE`；不要把令牌写进仓库。
 
@@ -81,6 +87,7 @@ docs/                开发文档与发布说明
 - 修改版作者：**xiaoshunxing**（GitHub：[@xiaoshunxing](https://github.com/xiaoshunxing)）。
 - 测试用的 vendored configobj 为 BSD-3-Clause，仅用于测试，不进入插件包。
 - 插件不包含 OCR 引擎、模型或其他二进制依赖。
+- 文档与修改版代码由 DeepSeek Harness（dsh）参与创作；上游原文与许可证原文除外，详见 [AI-DISCLOSURE.md](AI-DISCLOSURE.md)。
 
 ## 免责声明
 
@@ -90,21 +97,10 @@ docs/                开发文档与发布说明
 
 LION modified is our fork of [LION](https://github.com/anmi2004/LION) for NVDA. It keeps the screen-reader
 workflow but talks to an external PaddleOCR HTTP service instead of bundling an OCR engine. It adds multiple
-OCR areas, per-area de-duplication strategies, queued speech, and configurable models/endpoints. Two add-ons
-are provided: the full `LION-modified` and the simpler `LION-modified-lite`. Licensed under
+OCR areas, per-area de-duplication strategies, queued speech, optional merged region capture, per-area classic
+similarity thresholds, a globally fixed settings section on NVDA 2026.3+, and configurable models/endpoints.
+Two add-ons are provided: the full `LION-modified` and the simpler `LION-modified-lite`. Licensed under
 **GPL-2.0-or-later**; see [COPYING.txt](COPYING.txt) and [NOTICE.md](NOTICE.md). We are not affiliated with
 NV Access or the original authors.
 
-AI 创作声明：本文案由 AI 参与创作。
-
-代码声明：本修改版代码在原版 LION 基础上由 AI 参与编写。
-
-模型版本：DeepSeek-V4.1-Flash。
-
-详见 [AI-DISCLOSURE.md](AI-DISCLOSURE.md)。
-
-AI disclosure: This text was created with AI participation.
-
-Code disclosure: The modified code is based on the original LION and was written with AI participation.
-
-Model version: DeepSeek-V4.1-Flash.
+[![](https://img.shields.io/badge/powered_by-dsh-4D6BFE?style=flat-square&logo=deepseek&logoColor=white)](https://github.com/deepseek-ai/deepseek-harness)
