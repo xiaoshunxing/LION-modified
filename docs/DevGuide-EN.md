@@ -113,6 +113,7 @@ way to hear several areas at once.
 
 ```
 LION-modified/
+├── AGENTS.md                             # maintenance workflow and agent rules (read this first)
 ├── src/                                  # packaging root: zipped verbatim into the .nvda-addon
 │   ├── manifest.ini                      # declaration (original description/log first, fork below)
 │   ├── installTasks.py                   # registers the config section as base-only (NVDA 2026.3+)
@@ -137,13 +138,13 @@ LION-modified/
 │   ├── test_dedup.py                     # 103 cases: four dedup strategies (pure logic, virtual time)
 │   ├── test_plugin_integration.py        # 84 cases: multi-area loop, queued speech, merged capture, migration, profile/threshold, live end-to-end
 │   ├── test_lite_variant.py              # 41 cases: lite edition source/artifact/translations/plugin lifecycle
-│   ├── test_manifest_and_config.py       # 42 cases: declaration, confspec, badge and installTasks validation
+│   ├── test_manifest_and_config.py       # 49 cases: declaration, confspec, badge, installTasks and the AGENTS.md workflow
 │   ├── test_package.py                   # 18 cases: structural validation of the .nvda-addon
 │   ├── test_readme_html.py               # 6 cases: readme.html generator image/link support
 │   ├── probe_service.py                  # liveness + one real OCR call
 │   ├── bench_http.py                     # end-to-end benchmark (area × format)
 │   └── artifacts/                        # measured output
-├── docs/                                 # this file and the Chinese original
+├── docs/                                 # this file, the maintenance workflow and the Chinese original
 └── dist/                                 # LION-modified-3.3.8.nvda-addon + file listing
 ```
 
@@ -551,11 +552,11 @@ default one-second interval, a "subtitle strip" plus a "chat" area costs about 1
 | `test_dedup.py` | 103 | **the four dedup strategies** plus 3.3.5 regressions: typewriter whole-line, stability window, clear-then-repeat, line-by-line append, whole-line replacement, truncated tail, 10 s forced release, punctuation boundaries, English words not split, state lifecycle (virtual time), incremental-jitter regressions, fuzzy anchor, punctuation-only filter, digit changes, **≥200-character repeated-text autojunk regression** |
 | `test_lite_variant.py` | 41 | lite edition: manifest identity, localised-manifest parsing, isolated config section, 17 settings, no client copy, staged client byte-identical to the full edition, model composition, concise wording, translation coverage, bundle checks, **empty-frame grace, autojunk, plugin lifecycle and idempotent registration, base-only registration, profile documentation, local badge PNG** |
 | `test_plugin_integration.py` | 84 | config-section independence; area migration and **service-address migration (3.3.6)**; only checked areas captured; per-area crop and target; **different strategies per area**; **per-area threshold override/inherit and "other modes ignore the threshold"**; per-area dedup and failure isolation; queue/non-queue priorities and order; state cleanup after edit/remove; regex filtering and whitespace collapsing; **merged region capture (incl. failure fallback)**; **idempotent settings-panel registration**; **base-only runtime registration and profile detection**; toggle script; loop exit; **1 live end-to-end case** |
-| `test_manifest_and_config.py` | 42 | manifest fields and apiVersion; **original description/log first, fork below**; confspec defaults, out-of-range, booleans, JSON-with-commas not split; **dsh badge policy (no legacy declarations, local PNG for manuals, plain-text attribution in manifests)**; **installTasks SPEC/self-containment/exception swallowing**; source hygiene (no engine/PIL/bytecode remnants, `regions.py` free of GUI imports, `dedup.py` free of NVDA imports, translatable strings, .po contents) |
+| `test_manifest_and_config.py` | 49 | manifest fields and apiVersion; **original description/log first, fork below**; confspec defaults, out-of-range, booleans, JSON-with-commas not split; **dsh badge policy (no legacy declarations, local PNG for manuals, plain-text attribution in manifests)**; **installTasks SPEC/self-containment/exception swallowing**; **AGENTS.md workflow document (sections/commands/links/badge)**; source hygiene (no engine/PIL/bytecode remnants, `regions.py` free of GUI imports, `dedup.py` free of NVDA imports, translatable strings, .po contents) |
 | `test_package.py` | 18 | artifact naming, forbidden entries, required entries (incl. `regions.py`/`dedup.py`/`installTasks.py`/`doc/dsh-badge.png`), no original override, size budget, doc references, **readme original sections before the fork section**, **manifest original block first**, **readme.html badge rendering**, translation catalog, artifact matches `src/` file-for-file |
 | `test_readme_html.py` | 6 | readme.md → readme.html image and linked-image (badge) support, plain links and HTML escaping do not regress |
 
-**414 cases total**, all runnable with a single `unittest discover` (the artifact cases are skipped when there is no `dist/`).
+**421 cases total**, all runnable with a single `unittest discover` (the artifact cases are skipped when there is no `dist/`).
 
 **How the plugin is tested without NVDA**: `test_plugin_integration.py` replaces
 `gui`/`wx`/`api`/`ui`/`tones`/`speech`/`scriptHandler`/`globalPluginHandler`/`screenCurtain`/`locationHelper`/`PIL`
@@ -971,6 +972,8 @@ Since 3.3.8:
    declarations. After changing a manual, rerun `scripts/make_readme_html.py` (packaging also regenerates it).
 10. Changing the config section or adding a key? Update `SPEC` in `src/installTasks.py` and
     `variants/lite/src/installTasks.py` (`InstallTasksTests` asserts they match the plugin confspec via AST).
+11. Changing the process, commands or release boundaries? Update the root `AGENTS.md`,
+    `docs/发布流程.md` and this guide, then run the documentation tests.
 
 ## 16. Licence and credits
 

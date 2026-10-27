@@ -75,10 +75,12 @@ src/                 完整版插件源（manifest、globalPlugins/lion、doc、
 variants/lite/src/   清亮版插件源（globalPlugins/lionlite；客户端打包时从完整版复制）
 scripts/             构建与文档生成脚本
 tests/               离线测试、NVDA 桩、vendored configobj
-docs/                开发文档与发布说明
+docs/                开发文档、维护工作流与发布说明
+AGENTS.md            维护工作流与自动化代理规则（维护者/代理先读）
 ```
 
 开发文档：[中文](docs/开发文档-中文.md) / [English](docs/DevGuide-EN.md)。
+维护与自动化代理：[AGENTS.md](AGENTS.md)（固定工作流与硬性约束）。
 
 ## 许可与致谢
 

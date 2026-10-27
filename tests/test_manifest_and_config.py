@@ -540,6 +540,7 @@ class BadgeAttributionTests(unittest.TestCase):
 
 	BADGED_DOCS = (
 		"README.md",
+		"AGENTS.md",
 		"CHANGELOG.md",
 		"NOTICE.md",
 		"CONTRIBUTING.md",
@@ -668,6 +669,111 @@ class InstallTasksTests(unittest.TestCase):
 
 		fake.configSections = types.SimpleNamespace(registerSection=fail)
 		self.runOnInstall(fake)  # 不能抛异常
+
+
+AGENTS_DOC = os.path.join(ROOT, "AGENTS.md")
+AGENTS_HEADINGS = (
+	"# AGENTS.md",
+	"## 1. 项目事实与结构",
+	"## 2. 硬性约束",
+	"## 3. 固定工作流",
+	"## 4. 命令速查",
+	"## 5. 变更类型与必做事项",
+	"## 6. 版本、NVDA 兼容与配置节",
+	"## 7. 文档、本地化与 dsh 徽章",
+	"## 8. Agent Teams 协作约定",
+	"## 9. 发布边界与审批",
+	"## 10. 常见故障与回滚",
+	"## 11. 完成标准",
+)
+#: 工作流文档必须保留的可执行命令与关键约定
+AGENTS_COMMANDS = (
+	"build_addon.ps1",
+	"unittest discover",
+	"git archive",
+	"SHA256SUMS.txt",
+	"installTasks",
+	"classicThreshold",
+	"PYTHONDONTWRITEBYTECODE",
+	"lastTestedNVDAVersion",
+)
+AGENTS_HARD_RULES = (
+	"installTasks.py",
+	"SPEC",
+	"unregisterSection",
+	"2026.1",
+	"2026.2",
+	"不保存副本",
+	"dsh-badge.png",
+	"Powered by dsh",
+	"img.shields.io",
+	"AI 声明",
+	"批准",
+	"push",
+)
+
+
+class AgentsFileTests(unittest.TestCase):
+	"""根 AGENTS.md：固定维护工作流必须存在、可执行、可导航且符合署名规范。"""
+
+	def read(self) -> str:
+		with open(AGENTS_DOC, encoding="utf-8") as handle:
+			return handle.read()
+
+	def testAgentsFileExistsAndEndsWithBadge(self):
+		self.assertTrue(os.path.isfile(AGENTS_DOC), "缺少根 AGENTS.md")
+		text = self.read().rstrip()
+		self.assertTrue(text, "AGENTS.md 不能为空")
+		self.assertTrue(text.endswith(BADGE), "AGENTS.md 文末必须是 dsh 官方徽章")
+
+	def testAgentsRequiredSections(self):
+		text = self.read()
+		for heading in AGENTS_HEADINGS:
+			with self.subTest(heading=heading):
+				self.assertIn(heading, text)
+
+	def testAgentsCommandsAndOrdering(self):
+		text = self.read()
+		for snippet in AGENTS_COMMANDS:
+			with self.subTest(snippet=snippet):
+				self.assertIn(snippet, text)
+		# 固定顺序：先打包，再跑全量测试（先测试会静默跳过产物用例）
+		self.assertLess(text.index("先打包"), text.index("全量测试"), "工作流顺序必须为“先打包，再全量测试”")
+
+	def testAgentsCoversHardRules(self):
+		text = self.read()
+		for snippet in AGENTS_HARD_RULES:
+			with self.subTest(snippet=snippet):
+				self.assertIn(snippet, text)
+
+	def testAgentsRelativeLinksResolve(self):
+		text = re.sub(r"```.*?```", "", self.read(), flags=re.S)
+		text = re.sub(r"`[^`\n]+`", "", text)  # 行内代码里的路径示例不是文档链接
+		for target in re.findall(r"\]\(([^)\s]+)\)", text):
+			if target.startswith(("http://", "https://", "mailto:", "#")):
+				continue
+			path = target.split("#", 1)[0].strip()
+			if not path:
+				continue
+			resolved = os.path.normpath(os.path.join(ROOT, path))
+			with self.subTest(link=target):
+				self.assertTrue(os.path.exists(resolved), f"AGENTS.md 链接不存在：{target}")
+
+	def testAgentsHasNoLegacyDeclarationsOrLocalPaths(self):
+		text = self.read()
+		self.assertIsNone(LEGACY_DECLARATION.search(text), "AGENTS.md 出现了旧 AI 声明字面量")
+		self.assertIsNone(
+			re.search(r"[A-Za-z]:\\", text),
+			"AGENTS.md 不得出现本机盘符绝对路径",
+		)
+
+	def testAgentsIsLinkedFromDocs(self):
+		for relative in ("README.md", "CONTRIBUTING.md"):
+			with self.subTest(path=relative):
+				with open(os.path.join(ROOT, relative), encoding="utf-8") as handle:
+					text = handle.read()
+				self.assertIn("AGENTS.md", text, f"{relative} 必须链接 AGENTS.md")
+				self.assertIn("](AGENTS.md)", text, f"{relative} 必须提供 AGENTS.md 的相对链接")
 
 
 if __name__ == "__main__":

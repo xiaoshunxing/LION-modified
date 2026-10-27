@@ -2,6 +2,8 @@
 
 欢迎提交 issue 和 pull request。提交代码即表示同意以我们的 **GPL-2.0-or-later** 许可发布你的贡献。
 
+开始修改前请先读 [AGENTS.md](AGENTS.md)：固定维护流程、硬性约束、打包/测试顺序与发布边界都在那里。
+
 ## 开发环境
 
 - Windows + PowerShell 7（`pwsh`）；
